@@ -1,0 +1,6 @@
+export { default as HoGuomBaner } from "./banner-ho-guom.jpg"
+export { default as BannerAIVI } from "./banner_ai.png"
+export { default as BannerAIEN } from "./banner_ai-en.png"
+export { default as Hero1VI } from "./hero1.png"
+export { default as Hero1EN } from "./hero1-en.png"
+export { default as BGTicket } from "./bg-ticket.png"
