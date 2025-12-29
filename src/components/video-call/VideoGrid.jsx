@@ -10,7 +10,7 @@ const VideoGrid = ({ localStream, peers, participants, currentUserId }) => {
   const getPeerStream = (accountId) => peers[accountId]?.stream
 
   // Calculate grid columns based on count
-  const count = participants.length + 1 // +1 for local user (if not in participants list yet, but typically we treat separately)
+  const count = participants.length
 
   const gridClassName =
     count === 1
@@ -23,36 +23,28 @@ const VideoGrid = ({ localStream, peers, participants, currentUserId }) => {
 
   return (
     <div className={`grid h-full w-full gap-4 ${gridClassName} p-4`}>
-      {/* Local User */}
-      {/* We can find current user in participants to get Avatar/Name if needed, or pass user object */}
-      {/* For now assuming passed props or separate handling */}
-      <div className="relative">
-        <VideoTile
-          stream={localStream}
-          name="You"
-          avatar={null} // TODO: Pass user avatar
-          isLocal={true}
-          micOn={true} // TODO: sync local mic state
-        />
-      </div>
+      {participants.map((participant) => {
+        const isLocal = String(participant.accountId) === String(currentUserId)
+        // If local, use localStream. If remote, look up in peers.
+        const stream = isLocal
+          ? localStream
+          : getPeerStream(participant.accountId)
 
-      {/* Remote Participants */}
-      {participants
-        .filter((p) => p.accountId !== parseInt(currentUserId))
-        .map((participant) => (
+        return (
           <div
             key={participant.participantId || participant.accountId}
             className="relative"
           >
             <VideoTile
-              stream={getPeerStream(participant.accountId)}
+              stream={stream}
               name={participant.username}
               avatar={participant.avatarImageUrl}
-              isLocal={false}
+              isLocal={isLocal}
               micOn={participant.isMicOn !== false} // Default to true if undefined
             />
           </div>
-        ))}
+        )
+      })}
     </div>
   )
 }

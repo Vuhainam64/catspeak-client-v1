@@ -56,8 +56,24 @@ const VideoTile = ({ stream, name, avatar, isLocal, micOn = true }) => {
 
       {/* Overlay Info */}
       <div className="absolute bottom-3 left-3 flex items-center gap-2 rounded-md bg-black/60 px-2 py-1">
-        <span className="text-sm font-medium text-white">
-          {isLocal ? "You" : name}
+        <span className="text-sm font-medium text-white flex items-center gap-2">
+          {name} {isLocal && "(You)"}
+          {isSpeaking && (
+            <div className="flex gap-0.5 items-end h-3">
+              <div
+                className="w-1 bg-green-500 animate-pulse h-2 rounded-full"
+                style={{ animationDelay: "0ms" }}
+              />
+              <div
+                className="w-1 bg-green-500 animate-pulse h-3 rounded-full"
+                style={{ animationDelay: "100ms" }}
+              />
+              <div
+                className="w-1 bg-green-500 animate-pulse h-1.5 rounded-full"
+                style={{ animationDelay: "200ms" }}
+              />
+            </div>
+          )}
         </span>
       </div>
 
