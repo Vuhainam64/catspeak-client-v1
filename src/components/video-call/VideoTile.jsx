@@ -1,18 +1,32 @@
 import { FiMicOff } from "react-icons/fi"
+import useAudioLevel from "@/hooks/useAudioLevel"
+import { useEffect, useRef } from "react"
 
 const VideoTile = ({ stream, name, avatar, isLocal, micOn = true }) => {
+  const audioLevel = useAudioLevel(stream)
+  const isSpeaking = micOn && audioLevel > 5
+  const videoRef = useRef(null)
+
+  useEffect(() => {
+    if (videoRef.current && stream) {
+      videoRef.current.srcObject = stream
+    }
+  }, [stream])
+
   return (
-    <div className="relative h-full w-full overflow-hidden rounded-lg bg-gray-900 border border-gray-800">
+    <div
+      className={`relative h-full w-full overflow-hidden rounded-lg bg-gray-900 border transition-all duration-200 ${
+        isSpeaking
+          ? "border-green-500 shadow-[0_0_15px_rgba(34,197,94,0.4)]"
+          : "border-gray-800"
+      }`}
+    >
       {stream ? (
         <video
           autoPlay
           playsInline
           muted={isLocal} // Always mute local video to prevent feedback
-          ref={(video) => {
-            if (video && stream) {
-              video.srcObject = stream
-            }
-          }}
+          ref={videoRef}
           className="h-full w-full object-cover"
         />
       ) : (
@@ -21,13 +35,19 @@ const VideoTile = ({ stream, name, avatar, isLocal, micOn = true }) => {
             <img
               src={avatar}
               alt={name}
-              className="h-24 w-24 rounded-full border-4 border-gray-700 object-cover"
+              className={`h-24 w-24 rounded-full border-4 object-cover transition-colors duration-200 ${
+                isSpeaking ? "border-green-500" : "border-gray-700"
+              }`}
               onError={(e) => {
                 e.target.style.display = "none"
               }} // Hide if fails
             />
           ) : (
-            <div className="flex h-24 w-24 items-center justify-center rounded-full bg-gray-700 border-4 border-gray-600 text-2xl font-bold text-gray-300">
+            <div
+              className={`flex h-24 w-24 items-center justify-center rounded-full bg-gray-700 border-4 text-2xl font-bold text-gray-300 transition-colors duration-200 ${
+                isSpeaking ? "border-green-500" : "border-gray-600"
+              }`}
+            >
               {(name || "?").charAt(0).toUpperCase()}
             </div>
           )}

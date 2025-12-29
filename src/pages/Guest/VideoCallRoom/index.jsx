@@ -23,6 +23,8 @@ import {
 import { useVideoCall } from "@/hooks/useVideoCall"
 import VideoGrid from "@/components/video-call/VideoGrid"
 import ParticipantList from "@/components/video-call/ParticipantList"
+import ChatBox from "@/components/video-call/ChatBox"
+import MicButton from "@/components/video-call/MicButton"
 
 const VideoCallRoom = () => {
   const { id } = useParams()
@@ -32,12 +34,9 @@ const VideoCallRoom = () => {
   const [cameraOn, setCameraOn] = useState(true)
   const [showChat, setShowChat] = useState(false)
   const [showParticipants, setShowParticipants] = useState(false)
-  const [message, setMessage] = useState("")
 
-  // Get current user and token
   const { user, token } = useSelector((state) => state.auth)
 
-  // Redirect if not authenticated
   if (!token) {
     return <Navigate to="/login" state={{ from: location }} replace />
   }
@@ -48,14 +47,6 @@ const VideoCallRoom = () => {
     error: sessionError,
   } = useGetVideoSessionByIdQuery(id, {
     skip: !id,
-  })
-
-  console.log("VideoCallRoom Session Status:", {
-    id,
-    isLoadingSession,
-    sessionError,
-    sessionData: session,
-    participants: session?.participants,
   })
 
   const [leaveSession, { isLoading: isLeaving }] =
@@ -79,21 +70,14 @@ const VideoCallRoom = () => {
     connection,
     localStream,
     peers,
-    participants: activeParticipants, // From SignalR events (real-time join/leave)
+    participants: activeParticipants,
+    messages,
+    isConnected,
     toggleAudio,
     toggleVideo,
     sendMessage,
   } = useVideoCall(id, user, token, session?.participants)
 
-  // Merge session participants with active streams
-  // session.participants is the source of truth for "who is allowed/invited" or "who was in DB"
-  // peers tells us who is actually continuously streaming to us
-  const allParticipants = activeParticipants
-
-  // Note: SignalR events might add people not yet in session.participants validation if API is slow
-  // But for now relying on session.participants + peers logic in VideoGrid is safest for metadata.
-
-  // Sync controls with hook
   const handleToggleMic = () => {
     const newState = !micOn
     setMicOn(newState)
@@ -106,19 +90,15 @@ const VideoCallRoom = () => {
     toggleVideo(newState)
   }
 
-  const handleSendMessage = () => {
-    if (message.trim()) {
-      sendMessage(message)
-        .then(() => setMessage(""))
-        .catch((err) => console.error("Failed to send message", err))
-    }
+  const handleSendMessage = (text) => {
+    sendMessage(text).catch((err) =>
+      console.error("Failed to send message", err)
+    )
   }
 
   const handleLeaveSession = async () => {
-    console.log("handleLeaveSession triggered")
     try {
       await leaveSession(id).unwrap()
-      console.log("Left session successfully via API")
       navigate("/rooms")
     } catch (error) {
       console.error("Failed to leave session:", error)
@@ -151,7 +131,6 @@ const VideoCallRoom = () => {
         </div>
 
         <div className="flex items-center gap-4">
-          {/* Meeting ID */}
           <button
             onClick={handleCopyLink}
             className="flex items-center gap-2 rounded-lg bg-blue-500 px-3 py-1.5 text-sm font-semibold text-white hover:bg-blue-600 transition"
@@ -170,7 +149,7 @@ const VideoCallRoom = () => {
           <VideoGrid
             localStream={localStream}
             peers={peers}
-            participants={allParticipants}
+            participants={activeParticipants}
             currentUserId={user?.id}
           />
         </div>
@@ -180,43 +159,21 @@ const VideoCallRoom = () => {
           <div className="w-80 flex flex-col">
             {showParticipants && (
               <ParticipantList
-                participants={allParticipants}
+                participants={activeParticipants}
                 peers={peers}
                 currentUserId={user?.id}
               />
             )}
 
             {showChat && !showParticipants && (
-              <div className="flex h-full flex-col border-l border-[#303134] bg-[#202124]">
-                <div className="border-b border-[#303134] px-4 py-3">
-                  <h3 className="text-sm font-semibold text-gray-100">
-                    Room Message
-                  </h3>
-                </div>
-                <div className="flex-1 overflow-y-auto p-4 text-center text-gray-500">
-                  Chat disabled (WIP)
-                </div>
-                <div className="border-t border-gray-200 p-4">
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      value={message}
-                      onChange={(e) => setMessage(e.target.value)}
-                      onKeyPress={(e) =>
-                        e.key === "Enter" && handleSendMessage()
-                      }
-                      placeholder="Type Something..."
-                      className="flex-1 rounded-lg border border-[#3c4043] bg-[#2a2a2b] px-3 py-2 text-sm text-gray-100 placeholder:text-gray-500 focus:border-[#8ab4f8] focus:outline-none focus:ring-1 focus:ring-[#8ab4f8]"
-                    />
-                    <button
-                      onClick={handleSendMessage}
-                      className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#8ab4f8] text-[#202124] transition hover:bg-[#a6c8ff]"
-                    >
-                      <FiSend className="h-4 w-4" />
-                    </button>
-                  </div>
-                </div>
-              </div>
+              <ChatBox
+                messages={messages}
+                currentUser={user}
+                allParticipants={activeParticipants}
+                onSendMessage={handleSendMessage}
+                isConnected={isConnected}
+                className="w-80"
+              />
             )}
           </div>
         )}
@@ -229,18 +186,12 @@ const VideoCallRoom = () => {
         </div>
 
         <div className="flex items-center gap-3">
-          <button
-            onClick={handleToggleMic}
-            className={`flex h-12 w-12 items-center justify-center rounded-full transition ${
-              micOn ? "bg-blue-500 text-white" : "bg-gray-200 text-gray-600"
-            }`}
-          >
-            {micOn ? (
-              <FiMic className="h-5 w-5" />
-            ) : (
-              <FiMicOff className="h-5 w-5" />
-            )}
-          </button>
+          <MicButton
+            micOn={micOn}
+            onToggle={handleToggleMic}
+            stream={localStream}
+            className="z-10"
+          />
 
           <button
             onClick={handleToggleCam}
@@ -274,9 +225,9 @@ const VideoCallRoom = () => {
             <FiUsers className="h-5 w-5" />
           </button>
 
-          <button className="flex h-12 w-12 items-center justify-center rounded-full bg-red-600 text-white transition hover:bg-red-700">
+          {/* <button className="flex h-12 w-12 items-center justify-center rounded-full bg-red-600 text-white transition hover:bg-red-700">
             <div className="h-3 w-3 rounded-full bg-white" />
-          </button>
+          </button> */}
 
           <button
             onClick={() => {

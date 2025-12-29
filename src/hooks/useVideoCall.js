@@ -27,7 +27,6 @@ const acquireMediaStream = async () => {
     try {
       return await navigator.mediaDevices.getUserMedia(constraints)
     } catch (err) {
-      // console.error(`Media constraint failed: ${JSON.stringify(constraints)}`, err)
       return null
     }
   }
@@ -37,18 +36,16 @@ const acquireMediaStream = async () => {
 
   // 2. If failed, try Audio only (common fallback)
   if (!stream) {
-    // console.log("Falling back to Audio Only")
     stream = await getMedia({ video: false, audio: true })
   }
 
   // 3. If failed, try Video only (rare, but possible)
   if (!stream) {
-    // console.log("Falling back to Video Only")
     stream = await getMedia({ video: true, audio: false })
   }
 
   if (stream) {
-    // console.log("Stream acquired:", stream.getTracks().map((t) => t.kind).join(", "))
+    // Stream acquired
   } else {
     console.warn(
       "No media devices could be acquired. Joining as listener (Receive Only)."
@@ -65,6 +62,7 @@ export const useVideoCall = (sessionId, user, token, initialParticipants) => {
   const [connection, setConnection] = useState(null)
   const [localStream, setLocalStream] = useState(null)
   const [participants, setParticipants] = useState([])
+  const [messages, setMessages] = useState([])
   const [peers, setPeers] = useState({}) // { [id]: { stream, pc, ... } }
 
   // -- Refs (for access in callbacks/effects without triggering re-runs) --
@@ -122,7 +120,6 @@ export const useVideoCall = (sessionId, user, token, initialParticipants) => {
 
         localStream.getTracks().forEach((track) => {
           if (!senders.find((s) => s.track?.kind === track.kind)) {
-            // console.log(`Adding missing ${track.kind} track to peer ${userId}`)
             pc.addTrack(track, localStream)
           }
         })
@@ -254,9 +251,29 @@ export const useVideoCall = (sessionId, user, token, initialParticipants) => {
             new RTCIceCandidate(JSON.parse(candidatesJson))
           )
       },
+      ReceiveMessage: (sessId, senderId, content, timestamp) => {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: Date.now() + Math.random(),
+            senderId,
+            content,
+            timestamp: timestamp || new Date().toISOString(),
+          },
+        ])
+      },
       ParticipantJoined: (...args) => {
         const participant = getArg(args)
         if (!participant) return
+
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: Date.now() + Math.random(),
+            type: "system",
+            content: `${participant.username} joined the chat`,
+          },
+        ])
 
         setParticipants((prev) => {
           if (prev.find((p) => p.accountId === participant.accountId))
@@ -278,12 +295,27 @@ export const useVideoCall = (sessionId, user, token, initialParticipants) => {
           peersRef.current[accountId].peerConnection.close()
           delete peersRef.current[accountId]
         }
+
+        setParticipants((prev) => {
+          const user = prev.find((p) => p.accountId === accountId)
+          if (user) {
+            setMessages((msgs) => [
+              ...msgs,
+              {
+                id: Date.now(),
+                type: "system",
+                content: `${user.username} left the chat`,
+              },
+            ])
+          }
+          return prev.filter((p) => p.accountId !== accountId)
+        })
+
         setPeers((prev) => {
           const next = { ...prev }
           delete next[accountId]
           return next
         })
-        setParticipants((prev) => prev.filter((p) => p.accountId !== accountId))
         dispatch(
           videoSessionsApi.util.invalidateTags([
             { type: "VideoSessions", id: String(sessionId) },
@@ -318,6 +350,7 @@ export const useVideoCall = (sessionId, user, token, initialParticipants) => {
       newConnection.on(event, handlers[event])
     })
     // Aliases
+    newConnection.on("receiveMessage", handlers.ReceiveMessage)
     newConnection.on("participantJoined", handlers.ParticipantJoined)
     newConnection.on("UserJoined", handlers.ParticipantJoined)
 
@@ -325,6 +358,7 @@ export const useVideoCall = (sessionId, user, token, initialParticipants) => {
     const start = async () => {
       try {
         await newConnection.start()
+        console.log("SignalR Connected")
         await newConnection.invoke("JoinSession", parseInt(sessionId))
 
         // Manual sync to be safe
@@ -394,11 +428,15 @@ export const useVideoCall = (sessionId, user, token, initialParticipants) => {
     })
   }, [participants, peers])
 
+  const isConnected = connection?.state === signalR.HubConnectionState.Connected
+
   return {
     connection,
+    isConnected,
     localStream,
     peers,
     participants: mergedParticipants,
+    messages,
     toggleAudio,
     toggleVideo,
     sendMessage,
