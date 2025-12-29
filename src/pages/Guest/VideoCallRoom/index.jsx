@@ -13,7 +13,7 @@ import {
   FiChevronRight,
   FiSend,
 } from "react-icons/fi"
-import { useSelector } from "react-redux"
+import { useGetProfileQuery } from "@/store/api/authApi"
 
 import {
   useGetVideoSessionByIdQuery,
@@ -35,11 +35,17 @@ const VideoCallRoom = () => {
   const [showChat, setShowChat] = useState(false)
   const [showParticipants, setShowParticipants] = useState(false)
 
-  const { user, token } = useSelector((state) => state.auth)
+  const { data: user, isLoading: isLoadingUser } = useGetProfileQuery()
 
-  if (!token) {
+  // Let the API handle 401. If we have no user and not loading, it means we failed to auth.
+  if (!isLoadingUser && !user) {
     return <Navigate to="/login" state={{ from: location }} replace />
   }
+
+  // We can still read token for legacy usage if needed, or rely on internal logic.
+  // For useVideoCall/joinSession, they might need a token string if they don't use the state directly.
+  // Since we are authenticated if we pass the above check, the token in LS should be valid.
+  const token = localStorage.getItem("token")
 
   const {
     data: session,
@@ -76,7 +82,7 @@ const VideoCallRoom = () => {
     toggleAudio,
     toggleVideo,
     sendMessage,
-  } = useVideoCall(id, user, token, session?.participants)
+  } = useVideoCall(id, user, session?.participants)
 
   const handleToggleMic = () => {
     const newState = !micOn

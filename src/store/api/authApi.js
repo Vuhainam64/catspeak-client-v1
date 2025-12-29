@@ -1,58 +1,93 @@
-import { baseApi } from './baseApi'
+import { baseApi } from "./baseApi"
 
 export const authApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     login: builder.mutation({
       query: (credentials) => ({
-        url: '/Auth/login',
-        method: 'POST',
+        url: "/Auth/login",
+        method: "POST",
         body: credentials,
       }),
-      invalidatesTags: ['Auth'],
+      invalidatesTags: ["Auth"],
+      async onQueryStarted(arg, { queryFulfilled }) {
+        try {
+          const { data } = await queryFulfilled
+          if (data.token) localStorage.setItem("token", data.token)
+          if (data.refreshToken)
+            localStorage.setItem("refreshToken", data.refreshToken)
+          if (data.user) localStorage.setItem("user", JSON.stringify(data.user))
+        } catch (err) {}
+      },
     }),
     register: builder.mutation({
       query: (userData) => ({
-        url: '/Auth/register',
-        method: 'POST',
+        url: "/Auth/register",
+        method: "POST",
         body: userData,
       }),
-      invalidatesTags: ['Auth'],
+      invalidatesTags: ["Auth"],
+      async onQueryStarted(arg, { queryFulfilled }) {
+        try {
+          const { data } = await queryFulfilled
+          if (data.token) localStorage.setItem("token", data.token)
+          if (data.refreshToken)
+            localStorage.setItem("refreshToken", data.refreshToken)
+          if (data.user) localStorage.setItem("user", JSON.stringify(data.user))
+        } catch (err) {}
+      },
     }),
     registerAdmin: builder.mutation({
       query: (userData) => ({
-        url: '/Auth/register-admin',
-        method: 'POST',
+        url: "/Auth/register-admin",
+        method: "POST",
         body: userData,
       }),
-      invalidatesTags: ['Auth'],
+      invalidatesTags: ["Auth"],
     }),
     refreshToken: builder.mutation({
       query: (tokenData) => ({
-        url: '/Auth/refresh-token',
-        method: 'POST',
+        url: "/Auth/refresh-token",
+        method: "POST",
         body: tokenData,
       }),
+      async onQueryStarted(arg, { queryFulfilled }) {
+        try {
+          const { data } = await queryFulfilled
+          if (data.token) localStorage.setItem("token", data.token)
+          if (data.refreshToken)
+            localStorage.setItem("refreshToken", data.refreshToken)
+        } catch (err) {}
+      },
     }),
     revoke: builder.mutation({
       query: (username) => ({
         url: `/Auth/revoke/${username}`,
-        method: 'POST',
+        method: "POST",
       }),
-      invalidatesTags: ['Auth'],
+      invalidatesTags: ["Auth"],
     }),
-    validateToken: builder.query({
-      query: (tokenData) => ({
-        url: '/Auth/validate-token',
-        method: 'POST',
-        body: tokenData,
-      }),
-    }),
+
     logout: builder.mutation({
       query: () => ({
-        url: '/Auth/logout',
-        method: 'POST',
+        url: "/Auth/logout",
+        method: "POST",
       }),
-      invalidatesTags: ['Auth'],
+      invalidatesTags: ["Auth"],
+      async onQueryStarted(arg, { queryFulfilled }) {
+        try {
+          await queryFulfilled
+          localStorage.removeItem("token")
+          localStorage.removeItem("refreshToken")
+          localStorage.removeItem("user")
+        } catch (err) {}
+      },
+    }),
+    getProfile: builder.query({
+      query: () => ({
+        url: "/Account/profile",
+        method: "GET",
+      }),
+      providesTags: ["User"],
     }),
   }),
 })
@@ -63,6 +98,7 @@ export const {
   useRegisterAdminMutation,
   useRefreshTokenMutation,
   useRevokeMutation,
-  useValidateTokenQuery,
+
   useLogoutMutation,
+  useGetProfileQuery,
 } = authApi

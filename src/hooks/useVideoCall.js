@@ -55,7 +55,7 @@ const acquireMediaStream = async () => {
   return stream
 }
 
-export const useVideoCall = (sessionId, user, token, initialParticipants) => {
+export const useVideoCall = (sessionId, user, initialParticipants) => {
   const dispatch = useDispatch()
 
   // -- State --
@@ -129,6 +129,7 @@ export const useVideoCall = (sessionId, user, token, initialParticipants) => {
 
   // -- 3. SignalR & WebRTC Logic --
   useEffect(() => {
+    const token = localStorage.getItem("token")
     if (!sessionId || !token) return
 
     const apiUrl = import.meta.env.VITE_API_BASE_URL
@@ -380,7 +381,7 @@ export const useVideoCall = (sessionId, user, token, initialParticipants) => {
         peersRef.current[uid].peerConnection.close()
       )
     }
-  }, [sessionId, token]) // Depends on Session/Token only
+  }, [sessionId]) // Depends on Session only (token is fetched internally)
 
   // -- 4. Public Actions --
 

@@ -5,7 +5,8 @@ const baseQuery = fetchBaseQuery({
   baseUrl: import.meta.env.VITE_API_BASE_URL || "/api",
   prepareHeaders: (headers, { getState }) => {
     // Get token from state if available, otherwise check localStorage
-    const token = getState()?.auth?.token || localStorage.getItem("token")
+    // Get token from state if available, otherwise check localStorage
+    const token = localStorage.getItem("token")
     if (token) {
       headers.set("authorization", `Bearer ${token}`)
     }
@@ -19,7 +20,7 @@ const baseQueryWithReauth = async (args, api, extraOptions) => {
 
   if (result.error && result.error.status === 401) {
     // Attempt to refresh logic
-    const refreshToken = api.getState().auth.refreshToken
+    const refreshToken = localStorage.getItem("refreshToken")
 
     if (refreshToken) {
       // prevent infinite loops if the refresh endpoint itself returns 401
@@ -37,37 +38,30 @@ const baseQueryWithReauth = async (args, api, extraOptions) => {
           )
 
           if (refreshResult.data) {
-            // Success! Store the new tokens
-            // We need to import the action creator.
-            // Since this file is imported by authSlice (indirectly via authApi... wait, circular dependency?)
-            // authApi imports baseApi. baseApi uses baseQuery.
-            // authSlice imports authApi.
-            // So we cannot import setCredentials from authSlice here easily without circular dependency risk?
-            // Actually authSlice import authApi which imports baseApi.
-            // So importing authSlice here would create: baseApi -> authSlice -> authApi -> baseApi.
-            // To avoid this, we can dispatch the action type manually or separate the types.
-            // Or better, since we are in the API, we can use the 'setCredentials' action if we import it from a separate file?
-            // No, setCredentials is in authSlice.
-
-            // Workaround: We can dispatch an action object manually matching what authSlice expects.
-            api.dispatch({
-              type: "auth/setCredentials",
-              payload: refreshResult.data,
-            })
+            const { token, refreshToken, user } = refreshResult.data
+            if (token) localStorage.setItem("token", token)
+            if (refreshToken) localStorage.setItem("refreshToken", refreshToken)
+            if (user) localStorage.setItem("user", JSON.stringify(user))
 
             // Retry the initial query
             result = await baseQuery(args, api, extraOptions)
           } else {
             // Refresh failed
-            api.dispatch({ type: "auth/clearCredentials" })
+            localStorage.removeItem("token")
+            localStorage.removeItem("refreshToken")
+            localStorage.removeItem("user")
           }
         } catch (err) {
-          api.dispatch({ type: "auth/clearCredentials" })
+          localStorage.removeItem("token")
+          localStorage.removeItem("refreshToken")
+          localStorage.removeItem("user")
         }
       }
     } else {
       // No refresh token available, logout
-      api.dispatch({ type: "auth/clearCredentials" })
+      localStorage.removeItem("token")
+      localStorage.removeItem("refreshToken")
+      localStorage.removeItem("user")
     }
   }
 
