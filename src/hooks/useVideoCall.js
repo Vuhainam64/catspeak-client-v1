@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 import { useEffect, useRef, useState, useMemo } from "react"
 import { useDispatch } from "react-redux"
 import * as signalR from "@microsoft/signalr"
@@ -55,11 +56,16 @@ const acquireMediaStream = async () => {
   return stream
 }
 
-export const useVideoCall = (sessionId, user, initialParticipants) => {
+export const useVideoCall = (
+  sessionId,
+  initialParticipants,
+  currentUserId,
+  shouldJoin = true
+) => {
   const dispatch = useDispatch()
 
   // -- State --
-  const [connection, setConnection] = useState(null)
+  const [isConnected, setIsConnected] = useState(false)
   const [localStream, setLocalStream] = useState(null)
   const [participants, setParticipants] = useState([])
   const [messages, setMessages] = useState([])
@@ -69,6 +75,21 @@ export const useVideoCall = (sessionId, user, initialParticipants) => {
   const peersRef = useRef({})
   const localStreamRef = useRef(null)
   const connectionRef = useRef(null)
+  const currentUserIdRef = useRef(currentUserId)
+  const startedRef = useRef(false)
+
+  useEffect(() => {
+    currentUserIdRef.current = currentUserId
+  }, [currentUserId])
+
+  // Helper to invalidate session tags
+  const invalidateSession = () => {
+    dispatch(
+      videoSessionsApi.util.invalidateTags([
+        { type: "VideoSessions", id: String(sessionId) },
+      ])
+    )
+  }
 
   // -- 1. Sync Initial Data --
   useEffect(() => {
@@ -130,7 +151,9 @@ export const useVideoCall = (sessionId, user, initialParticipants) => {
   // -- 3. SignalR & WebRTC Logic --
   useEffect(() => {
     const token = localStorage.getItem("token")
-    if (!sessionId || !token) return
+    if (!sessionId || !token || !shouldJoin) return
+
+    startedRef.current = true
 
     const apiUrl = import.meta.env.VITE_API_BASE_URL
     const hubBaseUrl = apiUrl.replace(/\/api\/?$/, "")
@@ -144,10 +167,9 @@ export const useVideoCall = (sessionId, user, initialParticipants) => {
       .configureLogging(signalR.LogLevel.Error)
       .build()
 
-    setConnection(newConnection)
     connectionRef.current = newConnection
 
-    // --- WebRTC Helpers (Closure maintains access to 'newConnection') ---
+    // --- WebRTC Helpers ---
 
     const createPeerConnection = async (targetId, remoteOffer = null) => {
       if (peersRef.current[targetId]) return null // Already exists
@@ -267,6 +289,10 @@ export const useVideoCall = (sessionId, user, initialParticipants) => {
         const participant = getArg(args)
         if (!participant) return
 
+        if (participant.accountId === currentUserIdRef.current) {
+          return
+        }
+
         setMessages((prev) => [
           ...prev,
           {
@@ -282,11 +308,7 @@ export const useVideoCall = (sessionId, user, initialParticipants) => {
           return [...prev, participant]
         })
         initiateConnection(participant.accountId)
-        dispatch(
-          videoSessionsApi.util.invalidateTags([
-            { type: "VideoSessions", id: String(sessionId) },
-          ])
-        )
+        invalidateSession()
       },
       ParticipantLeft: (...args) => {
         const accountId = getArg(args)
@@ -317,11 +339,7 @@ export const useVideoCall = (sessionId, user, initialParticipants) => {
           delete next[accountId]
           return next
         })
-        dispatch(
-          videoSessionsApi.util.invalidateTags([
-            { type: "VideoSessions", id: String(sessionId) },
-          ])
-        )
+        invalidateSession()
       },
       ParticipantAudioChanged: (sessId, userId, isEnabled) => {
         setParticipants((prev) =>
@@ -338,11 +356,7 @@ export const useVideoCall = (sessionId, user, initialParticipants) => {
         )
       },
       SessionEnded: () => {
-        dispatch(
-          videoSessionsApi.util.invalidateTags([
-            { type: "VideoSessions", id: String(sessionId) },
-          ])
-        )
+        invalidateSession()
       },
     }
 
@@ -355,11 +369,17 @@ export const useVideoCall = (sessionId, user, initialParticipants) => {
     newConnection.on("participantJoined", handlers.ParticipantJoined)
     newConnection.on("UserJoined", handlers.ParticipantJoined)
 
+    // Monitor Connection State
+    newConnection.onclose(() => setIsConnected(false))
+    newConnection.onreconnecting(() => setIsConnected(false))
+    newConnection.onreconnected(() => setIsConnected(true))
+
     // Start
     const start = async () => {
       try {
         await newConnection.start()
         console.log("SignalR Connected")
+        setIsConnected(true)
         await newConnection.invoke("JoinSession", parseInt(sessionId))
 
         // Manual sync to be safe
@@ -369,19 +389,34 @@ export const useVideoCall = (sessionId, user, initialParticipants) => {
         if (res?.participants) setParticipants(res.participants)
       } catch (err) {
         console.error("SignalR Init Error:", err)
+        setIsConnected(false)
       }
     }
 
-    // Always start regardless of local stream
     start()
 
     return () => {
+      Object.keys(handlers).forEach((event) => {
+        newConnection.off(event, handlers[event])
+      })
+
+      // Aliases
+      newConnection.off("receiveMessage", handlers.ReceiveMessage)
+      newConnection.off("participantJoined", handlers.ParticipantJoined)
+      newConnection.off("UserJoined", handlers.ParticipantJoined)
+
+      // 2. Stop SignalR connection
       newConnection.stop()
-      Object.keys(peersRef.current).forEach((uid) =>
+      connectionRef.current = null
+
+      // 3. Close all peer connections
+      Object.keys(peersRef.current).forEach((uid) => {
         peersRef.current[uid].peerConnection.close()
-      )
+      })
+
+      peersRef.current = {}
     }
-  }, [sessionId]) // Depends on Session only (token is fetched internally)
+  }, [sessionId, shouldJoin])
 
   // -- 4. Public Actions --
 
@@ -429,10 +464,8 @@ export const useVideoCall = (sessionId, user, initialParticipants) => {
     })
   }, [participants, peers])
 
-  const isConnected = connection?.state === signalR.HubConnectionState.Connected
-
   return {
-    connection,
+    connection: connectionRef.current,
     isConnected,
     localStream,
     peers,

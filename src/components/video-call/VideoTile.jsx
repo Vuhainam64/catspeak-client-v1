@@ -13,6 +13,17 @@ const VideoTile = ({ stream, name, avatar, isLocal, micOn = true }) => {
     }
   }, [stream])
 
+  useEffect(() => {
+    if (!stream) return
+
+    console.log(`[VideoTile] ${name || "unknown"} stream`, {
+      audioTracks: stream.getAudioTracks().length,
+      videoTracks: stream.getVideoTracks().length,
+      audioEnabled: stream.getAudioTracks().map((t) => t.enabled),
+      videoEnabled: stream.getVideoTracks().map((t) => t.enabled),
+    })
+  }, [stream, name])
+
   return (
     <div
       className={`relative h-full w-full overflow-hidden rounded-lg bg-gray-900 border transition-all duration-200 ${

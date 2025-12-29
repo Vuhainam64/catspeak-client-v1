@@ -21,7 +21,7 @@ const LoginPage = () => {
     e.preventDefault()
     try {
       await login({ username: email, password }).unwrap()
-      const from = location.state?.from?.pathname || "/app"
+      const from = location.state?.from?.pathname || "/rooms"
       navigate(from, { replace: true }) // Redirect to origin or app dashboard
     } catch (err) {
       console.error("Login failed:", err)
