@@ -1,13 +1,13 @@
-import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
+import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react"
 
 // Base API configuration
 const baseQuery = fetchBaseQuery({
-  baseUrl: import.meta.env.VITE_API_BASE_URL || '/api',
+  baseUrl: import.meta.env.VITE_API_BASE_URL || "/api",
   prepareHeaders: (headers, { getState }) => {
     // Get token from state if available, otherwise check localStorage
-    const token = getState()?.auth?.token || localStorage.getItem('token')
+    const token = getState()?.auth?.token || localStorage.getItem("token")
     if (token) {
-      headers.set('authorization', `Bearer ${token}`)
+      headers.set("authorization", `Bearer ${token}`)
     }
     return headers
   },
@@ -15,9 +15,8 @@ const baseQuery = fetchBaseQuery({
 
 // Base API slice
 export const baseApi = createApi({
-  reducerPath: 'api',
+  reducerPath: "api",
   baseQuery,
-  tagTypes: ['Auth', 'User'], // Define tag types for cache invalidation
+  tagTypes: ["Auth", "User", "VideoSessions", "Rooms"], // Define tag types for cache invalidation
   endpoints: () => ({}),
 })
-

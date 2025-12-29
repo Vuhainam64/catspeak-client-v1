@@ -1,259 +1,406 @@
-import { useEffect, useRef, useState, useCallback } from 'react'
-import * as signalR from '@microsoft/signalr'
+import { useEffect, useRef, useState, useMemo } from "react"
+import { useDispatch } from "react-redux"
+import * as signalR from "@microsoft/signalr"
+import { videoSessionsApi } from "@/store/api/videoSessionsApi"
 
 const ICE_SERVERS = {
   iceServers: [
-    { urls: 'stun:stun.l.google.com:19302' },
-    { urls: 'stun:global.stun.twilio.com:3478' }
+    { urls: "stun:stun.l.google.com:19302" },
+    { urls: "stun:global.stun.twilio.com:3478" },
   ],
 }
 
-export const useVideoCall = (sessionId, user, token) => {
+/**
+ * Helper to acquire media stream with fallback strategy
+ * Video+Audio -> Audio Only -> Video Only -> Null
+ */
+const acquireMediaStream = async () => {
+  // Guard against missing mediaDevices (e.g. insecure context)
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    console.warn(
+      "navigator.mediaDevices.getUserMedia is not available. Joining as listener."
+    )
+    return null
+  }
+
+  const getMedia = async (constraints) => {
+    try {
+      return await navigator.mediaDevices.getUserMedia(constraints)
+    } catch (err) {
+      // console.error(`Media constraint failed: ${JSON.stringify(constraints)}`, err)
+      return null
+    }
+  }
+
+  // 1. Try Video + Audio
+  let stream = await getMedia({ video: true, audio: true })
+
+  // 2. If failed, try Audio only (common fallback)
+  if (!stream) {
+    // console.log("Falling back to Audio Only")
+    stream = await getMedia({ video: false, audio: true })
+  }
+
+  // 3. If failed, try Video only (rare, but possible)
+  if (!stream) {
+    // console.log("Falling back to Video Only")
+    stream = await getMedia({ video: true, audio: false })
+  }
+
+  if (stream) {
+    // console.log("Stream acquired:", stream.getTracks().map((t) => t.kind).join(", "))
+  } else {
+    console.warn(
+      "No media devices could be acquired. Joining as listener (Receive Only)."
+    )
+  }
+
+  return stream
+}
+
+export const useVideoCall = (sessionId, user, token, initialParticipants) => {
+  const dispatch = useDispatch()
+
+  // -- State --
   const [connection, setConnection] = useState(null)
   const [localStream, setLocalStream] = useState(null)
-  const [peers, setPeers] = useState({}) // { userId: { stream, peerConnection, user } }
-  const [participants, setParticipants] = useState([]) // List of participants in the session
-  const peersRef = useRef({}) // Ref to keep track of peers without triggering re-renders
-  const localStreamRef = useRef(null)
+  const [participants, setParticipants] = useState([])
+  const [peers, setPeers] = useState({}) // { [id]: { stream, pc, ... } }
 
-  // Initialize Media Stream
+  // -- Refs (for access in callbacks/effects without triggering re-runs) --
+  const peersRef = useRef({})
+  const localStreamRef = useRef(null)
+  const connectionRef = useRef(null)
+
+  // -- 1. Sync Initial Data --
   useEffect(() => {
-    const startLocalStream = async () => {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: true,
-          audio: true,
+    if (initialParticipants) {
+      setParticipants((prev) => {
+        // Merge API data with existing state to preserve flags if any
+        return initialParticipants.map((apiP) => {
+          const existing = prev.find((p) => p.accountId === apiP.accountId)
+          return existing
+            ? {
+                ...apiP,
+                isMicOn: existing.isMicOn,
+                isCameraOn: existing.isCameraOn,
+              }
+            : apiP
         })
+      })
+    }
+  }, [initialParticipants])
+
+  // -- 2. Media Initialization --
+  useEffect(() => {
+    let mounted = true
+
+    acquireMediaStream().then((stream) => {
+      if (mounted && stream) {
         setLocalStream(stream)
         localStreamRef.current = stream
-      } catch (err) {
-        console.error('Failed to access media devices:', err)
       }
-    }
-
-    startLocalStream()
+    })
 
     return () => {
+      mounted = false
       if (localStreamRef.current) {
         localStreamRef.current.getTracks().forEach((track) => track.stop())
       }
     }
   }, [])
 
-   // Initialize SignalR Connection
+  // -- 2b. Late Stream Attachment (if stream arrives after connection) --
   useEffect(() => {
-    if (!sessionId || !token || !localStream) return
+    if (!localStream) return
+
+    Object.keys(peersRef.current).forEach((userId) => {
+      const peer = peersRef.current[userId]
+      if (peer && peer.peerConnection) {
+        const pc = peer.peerConnection
+        const senders = pc.getSenders()
+
+        localStream.getTracks().forEach((track) => {
+          if (!senders.find((s) => s.track?.kind === track.kind)) {
+            // console.log(`Adding missing ${track.kind} track to peer ${userId}`)
+            pc.addTrack(track, localStream)
+          }
+        })
+      }
+    })
+  }, [localStream])
+
+  // -- 3. SignalR & WebRTC Logic --
+  useEffect(() => {
+    if (!sessionId || !token) return
 
     const apiUrl = import.meta.env.VITE_API_BASE_URL
-    // Strip trailing /api if present to get the root URL for the Hub
-    const hubBaseUrl = apiUrl.replace(/\/api\/?$/, '')
-    
+    const hubBaseUrl = apiUrl.replace(/\/api\/?$/, "")
+
+    // Build Connection
     const newConnection = new signalR.HubConnectionBuilder()
       .withUrl(`${hubBaseUrl}/hubs/videoChat`, {
         accessTokenFactory: () => token,
       })
       .withAutomaticReconnect()
+      .configureLogging(signalR.LogLevel.Error)
       .build()
 
     setConnection(newConnection)
+    connectionRef.current = newConnection
 
-    return () => {
-      if (newConnection) {
-        newConnection.stop()
-      }
-    }
-  }, [sessionId, token, localStream])
+    // --- WebRTC Helpers (Closure maintains access to 'newConnection') ---
 
-  // SignalR Event Handlers
-  useEffect(() => {
-    if (!connection) return
+    const createPeerConnection = async (targetId, remoteOffer = null) => {
+      if (peersRef.current[targetId]) return null // Already exists
 
-    const handleReceiveOffer = async (sessionId, senderId, offerJson) => {
-      console.log('Received Offer from:', senderId)
-      const offer = JSON.parse(offerJson)
-      await createPeerConnection(senderId, offer)
-    }
-
-    const handleReceiveAnswer = async (sessionId, senderId, answerJson) => {
-      console.log('Received Answer from:', senderId)
-      const answer = JSON.parse(answerJson)
-      const peer = peersRef.current[senderId]
-      if (peer) {
-        await peer.peerConnection.setRemoteDescription(new RTCSessionDescription(answer))
-      }
-    }
-
-    const handleReceiveIceCandidate = async (sessionId, senderId, candidateJson) => {
-      // console.log('Received ICE Candidate from:', senderId)
-      const candidate = JSON.parse(candidateJson)
-      const peer = peersRef.current[senderId]
-      if (peer) {
-        await peer.peerConnection.addIceCandidate(new RTCIceCandidate(candidate))
-      }
-    }
-
-    const handleParticipantJoined = (sessionId, participant) => {
-        console.log('Participant Joined:', participant)
-        setParticipants(prev => {
-            if(!prev.find(p => p.accountId === participant.accountId)) {
-                return [...prev, participant]
-            }
-            return prev
-        })
-        initiateConnection(participant.accountId)
-    }
-
-    const handleParticipantLeft = (sessionId, accountId) => {
-      console.log('Participant Left:', accountId)
-      removePeer(accountId)
-      setParticipants(prev => prev.filter(p => p.accountId !== accountId))
-    }
-
-    // --- Helper to create PeerConnection ---
-    const createPeerConnection = async (userId, remoteOffer = null) => {
-      if (peersRef.current[userId]) {
-        console.log('Peer already exists for', userId)
-        return // Already connected
-      }
-
-      console.log('Creating PeerConnection for', userId)
       const pc = new RTCPeerConnection(ICE_SERVERS)
 
       // Add local tracks
       if (localStreamRef.current) {
-        localStreamRef.current.getTracks().forEach((track) => {
-          pc.addTrack(track, localStreamRef.current)
-        })
+        localStreamRef.current
+          .getTracks()
+          .forEach((track) => pc.addTrack(track, localStreamRef.current))
       }
 
-      // Handle ICE Candidates
+      // Handle ICE
       pc.onicecandidate = (event) => {
-        if (event.candidate && connection.state === signalR.HubConnectionState.Connected) {
-          connection.invoke('SendIceCandidate', parseInt(sessionId), parseInt(userId), JSON.stringify(event.candidate))
-            .catch(err => console.error('Error sending ICE:', err));
+        if (
+          event.candidate &&
+          newConnection.state === signalR.HubConnectionState.Connected
+        ) {
+          newConnection
+            .invoke(
+              "SendIceCandidate",
+              parseInt(sessionId),
+              parseInt(targetId),
+              JSON.stringify(event.candidate)
+            )
+            .catch((err) => console.error("SendIceCandidate Error:", err))
         }
       }
 
-      // Handle Remote Stream
+      // Handle Stream
       pc.ontrack = (event) => {
-        console.log('Received remote track from', userId)
         setPeers((prev) => ({
           ...prev,
-          [userId]: { ...prev[userId], stream: event.streams[0] },
+          [targetId]: { ...prev[targetId], stream: event.streams[0] },
         }))
       }
 
-      peersRef.current[userId] = { peerConnection: pc }
-      setPeers(prev => ({ ...prev, [userId]: { ...prev[userId], peerConnection: pc } }))
+      // Store PC
+      peersRef.current[targetId] = { peerConnection: pc }
+      setPeers((prev) => ({
+        ...prev,
+        [targetId]: { ...prev[targetId], peerConnection: pc },
+      }))
 
+      // Handle Offer if provided (Answer)
       if (remoteOffer) {
-        // We received an offer, so we answer
         await pc.setRemoteDescription(new RTCSessionDescription(remoteOffer))
         const answer = await pc.createAnswer()
         await pc.setLocalDescription(answer)
-        if (connection.state === signalR.HubConnectionState.Connected) {
-             await connection.invoke('SendAnswer', parseInt(sessionId), parseInt(userId), JSON.stringify(answer))
+        if (newConnection.state === signalR.HubConnectionState.Connected) {
+          await newConnection.invoke(
+            "SendAnswer",
+            parseInt(sessionId),
+            parseInt(targetId),
+            JSON.stringify(answer)
+          )
         }
       }
 
       return pc
     }
 
-    const initiateConnection = async (targetUserId) => {
-        const pc = await createPeerConnection(targetUserId)
-        const offer = await pc.createOffer()
-        await pc.setLocalDescription(offer)
-        if (connection.state === signalR.HubConnectionState.Connected) {
-            await connection.invoke('SendOffer', parseInt(sessionId), parseInt(targetUserId), JSON.stringify(offer))
-        }
-    }
-    
-    const removePeer = (userId) => {
-        if (peersRef.current[userId]) {
-            peersRef.current[userId].peerConnection.close()
-            delete peersRef.current[userId]
-            setPeers(prev => {
-                const newState = { ...prev }
-                delete newState[userId]
-                return newState
-            })
-        }
-    }
+    const initiateConnection = async (targetId) => {
+      const pc = await createPeerConnection(targetId)
+      if (!pc) return
 
-     connection.on('ReceiveOffer', handleReceiveOffer)
-    connection.on('ReceiveAnswer', handleReceiveAnswer)
-    connection.on('ReceiveIceCandidate', handleReceiveIceCandidate)
-    connection.on('ParticipantJoined', handleParticipantJoined)
-    connection.on('ParticipantLeft', handleParticipantLeft)
+      const offer = await pc.createOffer()
+      await pc.setLocalDescription(offer)
 
-    // Start Connection and Join
-    const start = async () => {
-      try {
-        if (connection.state === signalR.HubConnectionState.Disconnected) {
-             await connection.start()
-             console.log('SignalR Connected')
-             await connection.invoke('JoinSession', parseInt(sessionId))
-        }
-      } catch (err) {
-        console.error('SignalR Connection Error:', err)
+      if (newConnection.state === signalR.HubConnectionState.Connected) {
+        await newConnection.invoke(
+          "SendOffer",
+          parseInt(sessionId),
+          parseInt(targetId),
+          JSON.stringify(offer)
+        )
       }
     }
 
-    if (localStream) {
-        start()
+    // --- Event Handlers ---
+
+    // Safe Argument Extractor (handles variable SignalR args)
+    const getArg = (args, fallbackIndex = 0) =>
+      args.length === 2 ? args[1] : args[fallbackIndex]
+
+    const handlers = {
+      ReceiveOffer: async (sessId, senderId, offerJson) => {
+        await createPeerConnection(senderId, JSON.parse(offerJson))
+      },
+      ReceiveAnswer: async (sessId, senderId, answerJson) => {
+        const peer = peersRef.current[senderId]
+        if (peer)
+          await peer.peerConnection.setRemoteDescription(
+            new RTCSessionDescription(JSON.parse(answerJson))
+          )
+      },
+      ReceiveIceCandidate: async (sessId, senderId, candidatesJson) => {
+        const peer = peersRef.current[senderId]
+        if (peer)
+          await peer.peerConnection.addIceCandidate(
+            new RTCIceCandidate(JSON.parse(candidatesJson))
+          )
+      },
+      ParticipantJoined: (...args) => {
+        const participant = getArg(args)
+        if (!participant) return
+
+        setParticipants((prev) => {
+          if (prev.find((p) => p.accountId === participant.accountId))
+            return prev
+          return [...prev, participant]
+        })
+        initiateConnection(participant.accountId)
+        dispatch(
+          videoSessionsApi.util.invalidateTags([
+            { type: "VideoSessions", id: String(sessionId) },
+          ])
+        )
+      },
+      ParticipantLeft: (...args) => {
+        const accountId = getArg(args)
+        if (!accountId) return
+
+        if (peersRef.current[accountId]) {
+          peersRef.current[accountId].peerConnection.close()
+          delete peersRef.current[accountId]
+        }
+        setPeers((prev) => {
+          const next = { ...prev }
+          delete next[accountId]
+          return next
+        })
+        setParticipants((prev) => prev.filter((p) => p.accountId !== accountId))
+        dispatch(
+          videoSessionsApi.util.invalidateTags([
+            { type: "VideoSessions", id: String(sessionId) },
+          ])
+        )
+      },
+      ParticipantAudioChanged: (sessId, userId, isEnabled) => {
+        setParticipants((prev) =>
+          prev.map((p) =>
+            p.accountId === userId ? { ...p, isMicOn: isEnabled } : p
+          )
+        )
+      },
+      ParticipantVideoChanged: (sessId, userId, isEnabled) => {
+        setParticipants((prev) =>
+          prev.map((p) =>
+            p.accountId === userId ? { ...p, isCameraOn: isEnabled } : p
+          )
+        )
+      },
+      SessionEnded: () => {
+        dispatch(
+          videoSessionsApi.util.invalidateTags([
+            { type: "VideoSessions", id: String(sessionId) },
+          ])
+        )
+      },
     }
+
+    // Bind Events
+    Object.keys(handlers).forEach((event) => {
+      newConnection.on(event, handlers[event])
+    })
+    // Aliases
+    newConnection.on("participantJoined", handlers.ParticipantJoined)
+    newConnection.on("UserJoined", handlers.ParticipantJoined)
+
+    // Start
+    const start = async () => {
+      try {
+        await newConnection.start()
+        await newConnection.invoke("JoinSession", parseInt(sessionId))
+
+        // Manual sync to be safe
+        const res = await dispatch(
+          videoSessionsApi.endpoints.getVideoSessionById.initiate(sessionId)
+        ).unwrap()
+        if (res?.participants) setParticipants(res.participants)
+      } catch (err) {
+        console.error("SignalR Init Error:", err)
+      }
+    }
+
+    // Always start regardless of local stream
+    start()
 
     return () => {
-      connection.off('ReceiveOffer', handleReceiveOffer)
-      connection.off('ReceiveAnswer', handleReceiveAnswer)
-      connection.off('ReceiveIceCandidate', handleReceiveIceCandidate)
-       connection.off('ParticipantJoined', handleParticipantJoined)
-      connection.off('ParticipantLeft', handleParticipantLeft)
-      
-      // Close all peers
-      Object.keys(peersRef.current).forEach(uid => {
-          peersRef.current[uid].peerConnection.close()
-      })
-      connection.stop()
+      newConnection.stop()
+      Object.keys(peersRef.current).forEach((uid) =>
+        peersRef.current[uid].peerConnection.close()
+      )
     }
-  }, [connection, sessionId, localStream]) // Dependencies for binding events
+  }, [sessionId, token]) // Depends on Session/Token only
 
-    // Helper to toggle media
-    const toggleAudio = (enabled) => {
-        if(localStreamRef.current) {
-            localStreamRef.current.getAudioTracks().forEach(t => t.enabled = enabled)
-            if(connection && connection.state === signalR.HubConnectionState.Connected) {
-                connection.invoke("ToggleAudio", parseInt(sessionId), enabled)
-                    .catch(err => console.error("ToggleAudio error", err))
-            }
-        }
+  // -- 4. Public Actions --
+
+  const toggleMedia = (kind, enabled) => {
+    if (!localStreamRef.current) return
+    const tracks =
+      kind === "audio"
+        ? localStreamRef.current.getAudioTracks()
+        : localStreamRef.current.getVideoTracks()
+    tracks.forEach((t) => (t.enabled = enabled))
+
+    if (connectionRef.current?.state === signalR.HubConnectionState.Connected) {
+      const method = kind === "audio" ? "ToggleAudio" : "ToggleVideo"
+      connectionRef.current
+        .invoke(method, parseInt(sessionId), enabled)
+        .catch(console.error)
     }
+  }
 
-    const toggleVideo = (enabled) => {
-        if(localStreamRef.current) {
-            localStreamRef.current.getVideoTracks().forEach(t => t.enabled = enabled)
-            if(connection && connection.state === signalR.HubConnectionState.Connected) {
-                connection.invoke("ToggleVideo", parseInt(sessionId), enabled)
-                     .catch(err => console.error("ToggleVideo error", err))
-            }
-        }
+  const toggleAudio = (en) => toggleMedia("audio", en)
+  const toggleVideo = (en) => toggleMedia("video", en)
+
+  const sendMessage = (text) => {
+    if (connectionRef.current?.state === signalR.HubConnectionState.Connected) {
+      return connectionRef.current.invoke(
+        "SendMessage",
+        parseInt(sessionId),
+        text
+      )
     }
+    return Promise.reject("Not Connected")
+  }
 
-    const sendMessage = (text) => {
-        if (connection && connection.state === signalR.HubConnectionState.Connected) {
-            return connection.invoke("SendMessage", parseInt(sessionId), text)
-        }
-        return Promise.reject("Connection not ready")
-    }
-
+  // Derived state for UI
+  const mergedParticipants = useMemo(() => {
+    return participants.map((p) => {
+      const peer = peers[p.accountId]
+      return {
+        ...p,
+        stream: peer?.stream || null,
+        isActive: !!peer,
+        isMicOn: p.isMicOn ?? true,
+        isCameraOn: p.isCameraOn ?? true,
+      }
+    })
+  }, [participants, peers])
 
   return {
     connection,
     localStream,
     peers,
-    participants,
+    participants: mergedParticipants,
     toggleAudio,
     toggleVideo,
-    sendMessage
+    sendMessage,
   }
 }
