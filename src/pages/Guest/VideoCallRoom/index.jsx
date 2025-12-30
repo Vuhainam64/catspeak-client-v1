@@ -39,10 +39,8 @@ const VideoCallRoom = () => {
 
   const { data: user, isLoading: isLoadingUser } = useGetProfileQuery()
 
-  // Let the API handle 401. If we have no user and not loading, it means we failed to auth.
-  if (!isLoadingUser && !user) {
-    return <Navigate to="/login" state={{ from: location }} replace />
-  }
+  // Extract current user ID correctly from API response structure
+  const currentUserId = user?.data?.accountId
 
   // We can still read token for legacy usage if needed, or rely on internal logic.
   // For useVideoCall/joinSession, they might need a token string if they don't use the state directly.
@@ -84,9 +82,7 @@ const VideoCallRoom = () => {
     toggleAudio,
     toggleVideo,
     sendMessage,
-  } = useVideoCall(id, session?.participants, user?.id, hasJoined)
-
-  console.log(activeParticipants)
+  } = useVideoCall(id, session?.participants, currentUserId, hasJoined)
 
   const handleToggleMic = () => {
     const newState = !micOn
@@ -120,6 +116,11 @@ const VideoCallRoom = () => {
     const url = window.location.href
     navigator.clipboard.writeText(url)
     toast.success("Link copied to clipboard!")
+  }
+
+  // Let the API handle 401. If we have no user and not loading, it means we failed to auth.
+  if (!isLoadingUser && !user) {
+    return <Navigate to="/login" state={{ from: location }} replace />
   }
 
   if (!hasJoined) {
@@ -259,7 +260,7 @@ const VideoCallRoom = () => {
             localStream={localStream}
             peers={peers}
             participants={activeParticipants}
-            currentUserId={user?.id}
+            currentUserId={currentUserId}
           />
         </div>
 
@@ -270,7 +271,7 @@ const VideoCallRoom = () => {
               <ParticipantList
                 participants={activeParticipants}
                 peers={peers}
-                currentUserId={user?.id}
+                currentUserId={currentUserId}
               />
             )}
 

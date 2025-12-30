@@ -4,6 +4,7 @@ import useAudioLevel from "@/hooks/useAudioLevel"
 const ParticipantItem = ({ participant, isMe, isConnected, stream }) => {
   const audioLevel = useAudioLevel(stream)
   const isMicOn = participant.isMicOn !== false // Default true if undefined
+  const isCameraOn = participant.isCameraOn !== false // Default true if undefined
 
   return (
     <div className="flex items-center gap-3 rounded-lg p-2 hover:bg-[#303134]">
@@ -32,6 +33,14 @@ const ParticipantItem = ({ participant, isMe, isConnected, stream }) => {
       </div>
 
       <div className="flex gap-2">
+        {/* Camera Indicator */}
+        {!isCameraOn ? (
+          <FiVideoOff className="h-4 w-4 text-red-400" />
+        ) : (
+          <FiVideo className="h-4 w-4 text-gray-400" />
+        )}
+
+        {/* Mic Indicator */}
         {!isMicOn ? (
           <FiMicOff className="h-4 w-4 text-red-400" />
         ) : (
@@ -57,7 +66,10 @@ const ParticipantList = ({ participants, peers, currentUserId }) => {
 
       <div className="flex-1 overflow-y-auto p-2">
         {participants.map((p) => {
-          const isMe = String(p.accountId) === String(currentUserId)
+          const isMe =
+            String(p.accountId) === String(currentUserId) ||
+            String(p.userId) === String(currentUserId) ||
+            String(p.id) === String(currentUserId)
           const isConnected =
             isMe || !!peers[String(p.accountId)] || !!peers[p.accountId]
           // For local user, we might not have 'stream' in 'participants' array if not merged properly,

@@ -1,60 +1,10 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import { useEffect, useRef, useState, useMemo } from "react"
 import { useDispatch } from "react-redux"
-import * as signalR from "@microsoft/signalr"
 import { videoSessionsApi } from "@/store/api/videoSessionsApi"
-
-const ICE_SERVERS = {
-  iceServers: [
-    { urls: "stun:stun.l.google.com:19302" },
-    { urls: "stun:global.stun.twilio.com:3478" },
-  ],
-}
-
-/**
- * Helper to acquire media stream with fallback strategy
- * Video+Audio -> Audio Only -> Video Only -> Null
- */
-const acquireMediaStream = async () => {
-  // Guard against missing mediaDevices (e.g. insecure context)
-  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-    console.warn(
-      "navigator.mediaDevices.getUserMedia is not available. Joining as listener."
-    )
-    return null
-  }
-
-  const getMedia = async (constraints) => {
-    try {
-      return await navigator.mediaDevices.getUserMedia(constraints)
-    } catch (err) {
-      return null
-    }
-  }
-
-  // 1. Try Video + Audio
-  let stream = await getMedia({ video: true, audio: true })
-
-  // 2. If failed, try Audio only (common fallback)
-  if (!stream) {
-    stream = await getMedia({ video: false, audio: true })
-  }
-
-  // 3. If failed, try Video only (rare, but possible)
-  if (!stream) {
-    stream = await getMedia({ video: true, audio: false })
-  }
-
-  if (stream) {
-    // Stream acquired
-  } else {
-    console.warn(
-      "No media devices could be acquired. Joining as listener (Receive Only)."
-    )
-  }
-
-  return stream
-}
+import { useMediaStream } from "./video-call/useMediaStream"
+import { useWebRTC } from "./video-call/useWebRTC"
+import { useVideoSignaling } from "./video-call/useVideoSignaling"
 
 export const useVideoCall = (
   sessionId,
@@ -63,26 +13,40 @@ export const useVideoCall = (
   shouldJoin = true
 ) => {
   const dispatch = useDispatch()
+  const currentUserIdRef = useRef(currentUserId)
 
-  // -- State --
-  const [isConnected, setIsConnected] = useState(false)
-  const [localStream, setLocalStream] = useState(null)
+  // -- State (Session Data) --
   const [participants, setParticipants] = useState([])
   const [messages, setMessages] = useState([])
-  const [peers, setPeers] = useState({}) // { [id]: { stream, pc, ... } }
 
-  // -- Refs (for access in callbacks/effects without triggering re-runs) --
-  const peersRef = useRef({})
-  const localStreamRef = useRef(null)
-  const connectionRef = useRef(null)
-  const currentUserIdRef = useRef(currentUserId)
-  const startedRef = useRef(false)
+  // -- 1. Media Stream --
+  const { localStream, toggleTrack, isMediaReady } = useMediaStream()
 
+  // -- 2. Signaling (Connection) --
+  // We use a ref for handlers because useWebRTC methods depend on connection,
+  // but connection depends on useVideoSignaling.
+  // We'll update the handlers in the useEffect below.
+  const handlersRef = useRef({})
+  const { connection, isConnected, invoke } = useVideoSignaling(
+    sessionId,
+    shouldJoin,
+    handlersRef.current
+  )
+
+  // -- 3. WebRTC --
+  const {
+    peers,
+    peersRef,
+    createPeerConnection,
+    initiateConnection,
+    closePeerConnection,
+  } = useWebRTC(sessionId, localStream, connection)
+
+  // -- Helpers --
   useEffect(() => {
     currentUserIdRef.current = currentUserId
   }, [currentUserId])
 
-  // Helper to invalidate session tags
   const invalidateSession = () => {
     dispatch(
       videoSessionsApi.util.invalidateTags([
@@ -91,170 +55,15 @@ export const useVideoCall = (
     )
   }
 
-  // -- 1. Sync Initial Data --
+  // Safe Argument Extractor
+  const getArg = (args, fallbackIndex = 0) =>
+    args.length === 2 ? args[1] : args[fallbackIndex]
+
+  // -- 4. Event Handlers Logic --
   useEffect(() => {
-    if (initialParticipants) {
-      setParticipants((prev) => {
-        // Merge API data with existing state to preserve flags if any
-        return initialParticipants.map((apiP) => {
-          const existing = prev.find((p) => p.accountId === apiP.accountId)
-          return existing
-            ? {
-                ...apiP,
-                isMicOn: existing.isMicOn,
-                isCameraOn: existing.isCameraOn,
-              }
-            : apiP
-        })
-      })
-    }
-  }, [initialParticipants])
-
-  // -- 2. Media Initialization --
-  useEffect(() => {
-    let mounted = true
-
-    acquireMediaStream().then((stream) => {
-      if (mounted && stream) {
-        setLocalStream(stream)
-        localStreamRef.current = stream
-      }
-    })
-
-    return () => {
-      mounted = false
-      if (localStreamRef.current) {
-        localStreamRef.current.getTracks().forEach((track) => track.stop())
-      }
-    }
-  }, [])
-
-  // -- 2b. Late Stream Attachment (if stream arrives after connection) --
-  useEffect(() => {
-    if (!localStream) return
-
-    Object.keys(peersRef.current).forEach((userId) => {
-      const peer = peersRef.current[userId]
-      if (peer && peer.peerConnection) {
-        const pc = peer.peerConnection
-        const senders = pc.getSenders()
-
-        localStream.getTracks().forEach((track) => {
-          if (!senders.find((s) => s.track?.kind === track.kind)) {
-            pc.addTrack(track, localStream)
-          }
-        })
-      }
-    })
-  }, [localStream])
-
-  // -- 3. SignalR & WebRTC Logic --
-  useEffect(() => {
-    const token = localStorage.getItem("token")
-    if (!sessionId || !token || !shouldJoin) return
-
-    startedRef.current = true
-
-    const apiUrl = import.meta.env.VITE_API_BASE_URL
-    const hubBaseUrl = apiUrl.replace(/\/api\/?$/, "")
-
-    // Build Connection
-    const newConnection = new signalR.HubConnectionBuilder()
-      .withUrl(`${hubBaseUrl}/hubs/videoChat`, {
-        accessTokenFactory: () => token,
-      })
-      .withAutomaticReconnect()
-      .configureLogging(signalR.LogLevel.Error)
-      .build()
-
-    connectionRef.current = newConnection
-
-    // --- WebRTC Helpers ---
-
-    const createPeerConnection = async (targetId, remoteOffer = null) => {
-      if (peersRef.current[targetId]) return null // Already exists
-
-      const pc = new RTCPeerConnection(ICE_SERVERS)
-
-      // Add local tracks
-      if (localStreamRef.current) {
-        localStreamRef.current
-          .getTracks()
-          .forEach((track) => pc.addTrack(track, localStreamRef.current))
-      }
-
-      // Handle ICE
-      pc.onicecandidate = (event) => {
-        if (
-          event.candidate &&
-          newConnection.state === signalR.HubConnectionState.Connected
-        ) {
-          newConnection
-            .invoke(
-              "SendIceCandidate",
-              parseInt(sessionId),
-              parseInt(targetId),
-              JSON.stringify(event.candidate)
-            )
-            .catch((err) => console.error("SendIceCandidate Error:", err))
-        }
-      }
-
-      // Handle Stream
-      pc.ontrack = (event) => {
-        setPeers((prev) => ({
-          ...prev,
-          [targetId]: { ...prev[targetId], stream: event.streams[0] },
-        }))
-      }
-
-      // Store PC
-      peersRef.current[targetId] = { peerConnection: pc }
-      setPeers((prev) => ({
-        ...prev,
-        [targetId]: { ...prev[targetId], peerConnection: pc },
-      }))
-
-      // Handle Offer if provided (Answer)
-      if (remoteOffer) {
-        await pc.setRemoteDescription(new RTCSessionDescription(remoteOffer))
-        const answer = await pc.createAnswer()
-        await pc.setLocalDescription(answer)
-        if (newConnection.state === signalR.HubConnectionState.Connected) {
-          await newConnection.invoke(
-            "SendAnswer",
-            parseInt(sessionId),
-            parseInt(targetId),
-            JSON.stringify(answer)
-          )
-        }
-      }
-
-      return pc
-    }
-
-    const initiateConnection = async (targetId) => {
-      const pc = await createPeerConnection(targetId)
-      if (!pc) return
-
-      const offer = await pc.createOffer()
-      await pc.setLocalDescription(offer)
-
-      if (newConnection.state === signalR.HubConnectionState.Connected) {
-        await newConnection.invoke(
-          "SendOffer",
-          parseInt(sessionId),
-          parseInt(targetId),
-          JSON.stringify(offer)
-        )
-      }
-    }
-
-    // --- Event Handlers ---
-
-    // Safe Argument Extractor (handles variable SignalR args)
-    const getArg = (args, fallbackIndex = 0) =>
-      args.length === 2 ? args[1] : args[fallbackIndex]
+    // We define the handlers here where we have access to `createPeerConnection`, etc.
+    // We mutate handlersRef.current so useVideoSignaling picks up the new logic
+    // when it executes its safeHandler lookups.
 
     const handlers = {
       ReceiveOffer: async (sessId, senderId, offerJson) => {
@@ -262,17 +71,19 @@ export const useVideoCall = (
       },
       ReceiveAnswer: async (sessId, senderId, answerJson) => {
         const peer = peersRef.current[senderId]
-        if (peer)
+        if (peer?.peerConnection) {
           await peer.peerConnection.setRemoteDescription(
             new RTCSessionDescription(JSON.parse(answerJson))
           )
+        }
       },
       ReceiveIceCandidate: async (sessId, senderId, candidatesJson) => {
         const peer = peersRef.current[senderId]
-        if (peer)
+        if (peer?.peerConnection) {
           await peer.peerConnection.addIceCandidate(
             new RTCIceCandidate(JSON.parse(candidatesJson))
           )
+        }
       },
       ReceiveMessage: (sessId, senderId, content, timestamp) => {
         setMessages((prev) => [
@@ -307,17 +118,18 @@ export const useVideoCall = (
             return prev
           return [...prev, participant]
         })
-        initiateConnection(participant.accountId)
+        // Strategy Change: Do NOT initiate here. Wait for joiner to call us.
+        // initiateConnection(participant.accountId)
+        console.log(
+          `[useVideoCall] Participant joined: ${participant.username}. Waiting for offer.`
+        )
         invalidateSession()
       },
       ParticipantLeft: (...args) => {
         const accountId = getArg(args)
         if (!accountId) return
 
-        if (peersRef.current[accountId]) {
-          peersRef.current[accountId].peerConnection.close()
-          delete peersRef.current[accountId]
-        }
+        closePeerConnection(accountId)
 
         setParticipants((prev) => {
           const user = prev.find((p) => p.accountId === accountId)
@@ -332,12 +144,6 @@ export const useVideoCall = (
             ])
           }
           return prev.filter((p) => p.accountId !== accountId)
-        })
-
-        setPeers((prev) => {
-          const next = { ...prev }
-          delete next[accountId]
-          return next
         })
         invalidateSession()
       },
@@ -360,92 +166,92 @@ export const useVideoCall = (
       },
     }
 
-    // Bind Events
-    Object.keys(handlers).forEach((event) => {
-      newConnection.on(event, handlers[event])
-    })
-    // Aliases
-    newConnection.on("receiveMessage", handlers.ReceiveMessage)
-    newConnection.on("participantJoined", handlers.ParticipantJoined)
-    newConnection.on("UserJoined", handlers.ParticipantJoined)
+    // Assign to Ref
+    Object.assign(handlersRef.current, handlers)
 
-    // Monitor Connection State
-    newConnection.onclose(() => setIsConnected(false))
-    newConnection.onreconnecting(() => setIsConnected(false))
-    newConnection.onreconnected(() => setIsConnected(true))
+    // Cleanup isn't strictly necessary for the ref itself, but good practice if we wanted to clear handlers
+    return () => {
+      // We could clear handlersRef.current but it might break if async events fire after unmount?
+      // useVideoSignaling handles cleanup of connection/events, so it won't call handlers after unmount.
+    }
+  }, [
+    createPeerConnection,
+    initiateConnection,
+    closePeerConnection,
+    sessionId,
+    dispatch,
+  ])
+  // Sync Initial Participants & Initiate Connections (Joiner Calls Everyone)
+  const hasInitiatedRef = useRef(false)
 
-    // Start
-    const start = async () => {
-      try {
-        await newConnection.start()
-        console.log("SignalR Connected")
-        setIsConnected(true)
-        await newConnection.invoke("JoinSession", parseInt(sessionId))
+  // Ensure we don't initiate until we have the local stream OR decided we won't have one (receive only)
+  // AND SignalR is connected (otherwise offers are lost)
+  useEffect(() => {
+    if (initialParticipants && currentUserId && isMediaReady && isConnected) {
+      setParticipants((prev) => {
+        return initialParticipants.map((apiP) => {
+          const existing = prev.find((p) => p.accountId === apiP.accountId)
+          return existing
+            ? {
+                ...apiP,
+                isMicOn: existing.isMicOn,
+                isCameraOn: existing.isCameraOn,
+                // Ensure we don't overwrite remote stream references if they exist in prev?
+                // Actually prev is mainly for local toggles/peers.
+              }
+            : apiP
+        })
+      })
 
-        // Manual sync to be safe
-        const res = await dispatch(
-          videoSessionsApi.endpoints.getVideoSessionById.initiate(sessionId)
-        ).unwrap()
-        if (res?.participants) setParticipants(res.participants)
-      } catch (err) {
-        console.error("SignalR Init Error:", err)
-        setIsConnected(false)
+      // Strategy Change: Joiner calls everyone ONE TIME
+      // Only proceed if we haven't initiated AND media is ready AND SignalR is connected
+      if (!hasInitiatedRef.current && initialParticipants.length > 0) {
+        hasInitiatedRef.current = true
+        initialParticipants.forEach((p) => {
+          if (String(p.accountId) !== String(currentUserId)) {
+            console.log(
+              `[useVideoCall] Initiating connection to existing peer (ONCE, MediaReady, Connected): ${p.username} (${p.accountId})`
+            )
+            initiateConnection(p.accountId)
+          }
+        })
       }
     }
+  }, [initialParticipants, currentUserId, isMediaReady, isConnected])
 
-    start()
+  // -- Public Actions --
 
-    return () => {
-      Object.keys(handlers).forEach((event) => {
-        newConnection.off(event, handlers[event])
-      })
-
-      // Aliases
-      newConnection.off("receiveMessage", handlers.ReceiveMessage)
-      newConnection.off("participantJoined", handlers.ParticipantJoined)
-      newConnection.off("UserJoined", handlers.ParticipantJoined)
-
-      // 2. Stop SignalR connection
-      newConnection.stop()
-      connectionRef.current = null
-
-      // 3. Close all peer connections
-      Object.keys(peersRef.current).forEach((uid) => {
-        peersRef.current[uid].peerConnection.close()
-      })
-
-      peersRef.current = {}
-    }
-  }, [sessionId, shouldJoin])
-
-  // -- 4. Public Actions --
-
-  const toggleMedia = (kind, enabled) => {
-    if (!localStreamRef.current) return
-    const tracks =
-      kind === "audio"
-        ? localStreamRef.current.getAudioTracks()
-        : localStreamRef.current.getVideoTracks()
-    tracks.forEach((t) => (t.enabled = enabled))
-
-    if (connectionRef.current?.state === signalR.HubConnectionState.Connected) {
-      const method = kind === "audio" ? "ToggleAudio" : "ToggleVideo"
-      connectionRef.current
-        .invoke(method, parseInt(sessionId), enabled)
-        .catch(console.error)
-    }
+  const toggleAudio = (en) => {
+    toggleTrack("audio", en)
+    // Optimistic Update
+    setParticipants((prev) =>
+      prev.map((p) =>
+        String(p.accountId) === String(currentUserId)
+          ? { ...p, isMicOn: en }
+          : p
+      )
+    )
+    if (isConnected)
+      invoke("ToggleAudio", parseInt(sessionId), en).catch(console.error)
   }
 
-  const toggleAudio = (en) => toggleMedia("audio", en)
-  const toggleVideo = (en) => toggleMedia("video", en)
+  const toggleVideo = (en) => {
+    toggleTrack("video", en)
+    // Optimistic Update
+    setParticipants((prev) =>
+      prev.map((p) =>
+        String(p.accountId) === String(currentUserId)
+          ? { ...p, isCameraOn: en }
+          : p
+      )
+    )
+    if (isConnected)
+      invoke("ToggleVideo", parseInt(sessionId), en).catch(console.error)
+  }
 
   const sendMessage = (text) => {
-    if (connectionRef.current?.state === signalR.HubConnectionState.Connected) {
-      return connectionRef.current.invoke(
-        "SendMessage",
-        parseInt(sessionId),
-        text
-      )
+    if (isConnected) {
+      return invoke("SendMessage", parseInt(sessionId), text)
     }
     return Promise.reject("Not Connected")
   }
@@ -465,7 +271,7 @@ export const useVideoCall = (
   }, [participants, peers])
 
   return {
-    connection: connectionRef.current,
+    connection,
     isConnected,
     localStream,
     peers,

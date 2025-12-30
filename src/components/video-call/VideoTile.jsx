@@ -1,17 +1,30 @@
-import { FiMicOff } from "react-icons/fi"
+import { FiMicOff, FiVideoOff } from "react-icons/fi"
 import useAudioLevel from "@/hooks/useAudioLevel"
 import { useEffect, useRef } from "react"
 
-const VideoTile = ({ stream, name, avatar, isLocal, micOn = true }) => {
+const VideoTile = ({
+  stream,
+  name,
+  avatar,
+  isLocal,
+  micOn = true,
+  videoOn = true,
+}) => {
   const audioLevel = useAudioLevel(stream)
   const isSpeaking = micOn && audioLevel > 5
   const videoRef = useRef(null)
 
   useEffect(() => {
-    if (videoRef.current && stream) {
+    console.log(`[VideoTile] Effect triggered for ${name}`, {
+      streamId: stream?.id,
+      videoOn,
+      hasRef: !!videoRef.current,
+    })
+    if (videoRef.current && stream && videoOn) {
       videoRef.current.srcObject = stream
+      console.log(`[VideoTile] srcObject assigned for ${name}`)
     }
-  }, [stream])
+  }, [stream, videoOn])
 
   useEffect(() => {
     if (!stream) return
@@ -32,7 +45,7 @@ const VideoTile = ({ stream, name, avatar, isLocal, micOn = true }) => {
           : "border-gray-800"
       }`}
     >
-      {stream ? (
+      {stream && videoOn ? (
         <video
           autoPlay
           playsInline
@@ -93,6 +106,11 @@ const VideoTile = ({ stream, name, avatar, isLocal, micOn = true }) => {
         {!micOn && (
           <div className="rounded-full bg-red-510/90 p-1.5 backdrop-blur-sm">
             <FiMicOff className="h-4 w-4 text-white" />
+          </div>
+        )}
+        {!videoOn && (
+          <div className="rounded-full bg-red-510/90 p-1.5 backdrop-blur-sm">
+            <FiVideoOff className="h-4 w-4 text-white" />
           </div>
         )}
       </div>
