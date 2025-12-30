@@ -79,7 +79,12 @@ export const useMediaStream = () => {
       kind === "audio"
         ? localStreamRef.current.getAudioTracks()
         : localStreamRef.current.getVideoTracks()
-    tracks.forEach((t) => (t.enabled = enabled))
+
+    tracks.forEach((t) => {
+      if (t.kind === kind) {
+        t.enabled = enabled
+      }
+    })
   }
 
   return {

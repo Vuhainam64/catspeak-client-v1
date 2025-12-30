@@ -25,13 +25,6 @@ const VideoGrid = ({ localStream, peers, participants, currentUserId }) => {
     <div className={`grid h-screen w-full gap-4 ${gridClassName} p-4`}>
       {participants.map((participant) => {
         // Debugging ID mismatch - DEEP LOG
-        console.log(`[VideoGrid] Checking ${participant.username}`, {
-          p_accountId: participant.accountId,
-          p_userId: participant.userId,
-          p_id: participant.id,
-          currentUserId: currentUserId,
-          match: String(participant.accountId) === String(currentUserId),
-        })
 
         const isLocal =
           (currentUserId &&

@@ -7,7 +7,7 @@ const ParticipantItem = ({ participant, isMe, isConnected, stream }) => {
   const isCameraOn = participant.isCameraOn !== false // Default true if undefined
 
   return (
-    <div className="flex items-center gap-3 rounded-lg p-2 hover:bg-[#303134]">
+    <div className="flex items-center gap-3 rounded-lg p-2 hover:bg-gray-100 transition-colors">
       <div className="relative">
         <img
           src={participant.avatarImageUrl || "https://via.placeholder.com/40"}
@@ -18,7 +18,7 @@ const ParticipantItem = ({ participant, isMe, isConnected, stream }) => {
         {/* Audio Indicator Ring */}
         {isMicOn && audioLevel > 5 && (
           <div
-            className="absolute inset-0 rounded-full border-2 border-green-500 opacity-80 transition-all duration-100 shadow-[0_0_10px_rgba(34,197,94,0.6)]"
+            className="absolute inset-0 rounded-full border-2 border-emerald-500 opacity-80 transition-all duration-100 shadow-[0_0_10px_rgba(16,185,129,0.6)]"
             style={{
               transform: `scale(${1 + Math.min(audioLevel / 50, 0.3)})`,
             }}
@@ -27,7 +27,7 @@ const ParticipantItem = ({ participant, isMe, isConnected, stream }) => {
       </div>
 
       <div className="flex-1 overflow-hidden">
-        <div className="truncate text-sm font-medium">
+        <div className="truncate text-sm font-medium text-headingColor">
           {participant.username} {isMe && "(You)"}
         </div>
       </div>
@@ -35,20 +35,16 @@ const ParticipantItem = ({ participant, isMe, isConnected, stream }) => {
       <div className="flex gap-2">
         {/* Camera Indicator */}
         {!isCameraOn ? (
-          <FiVideoOff className="h-4 w-4 text-red-400" />
+          <FiVideoOff className="h-4 w-4 text-cath-red-400" />
         ) : (
           <FiVideo className="h-4 w-4 text-gray-400" />
         )}
 
         {/* Mic Indicator */}
         {!isMicOn ? (
-          <FiMicOff className="h-4 w-4 text-red-400" />
+          <FiMicOff className="h-4 w-4 text-cath-red-400" />
         ) : (
-          <FiMic
-            className={`h-4 w-4 ${
-              audioLevel > 5 ? "text-green-400" : "text-gray-400"
-            }`}
-          />
+          <FiMic className="h-4 w-4 text-gray-400" />
         )}
       </div>
     </div>
@@ -57,14 +53,14 @@ const ParticipantItem = ({ participant, isMe, isConnected, stream }) => {
 
 const ParticipantList = ({ participants, peers, currentUserId }) => {
   return (
-    <div className="h-full w-full flex-col bg-[#202124] text-gray-100 border-l border-[#303134]">
-      <div className="border-b border-[#303134] px-4 py-3">
+    <div className="h-full w-full flex-col bg-white text-textColor border-l border-gray-200">
+      <div className="border-b border-gray-200 px-4 py-3">
         <h3 className="text-sm font-semibold">
           Participants ({participants.length})
         </h3>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-2">
+      <div className="flex-1 overflow-y-auto p-2 scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-transparent">
         {participants.map((p) => {
           const isMe =
             String(p.accountId) === String(currentUserId) ||

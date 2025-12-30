@@ -1,5 +1,5 @@
 import React from "react"
-import { slides } from "../constants"
+import { slides } from "@/constants/constants"
 import { BubbleChevronLeft, BubbleChevronRight } from "@/components/ui/button"
 
 const HeroCarousel = ({ active, setActive, current, next, prev }) => {

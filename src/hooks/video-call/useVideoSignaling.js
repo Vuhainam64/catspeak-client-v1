@@ -53,10 +53,7 @@ export const useVideoSignaling = (sessionId, shouldJoin, handlers = {}) => {
       ReceiveAnswer: "ReceiveAnswer",
       ReceiveIceCandidate: "ReceiveIceCandidate",
       ReceiveMessage: "ReceiveMessage",
-      receiveMessage: "ReceiveMessage", // Alias
       ParticipantJoined: "ParticipantJoined",
-      participantJoined: "ParticipantJoined", // Alias
-      UserJoined: "ParticipantJoined", // Alias
       ParticipantLeft: "ParticipantLeft",
       ParticipantAudioChanged: "ParticipantAudioChanged",
       ParticipantVideoChanged: "ParticipantVideoChanged",

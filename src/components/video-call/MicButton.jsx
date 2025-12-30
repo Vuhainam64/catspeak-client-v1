@@ -8,13 +8,13 @@ const MicButton = ({ micOn, onToggle, stream, className = "" }) => {
       {/* Audio Ripple/Indicator */}
       {micOn && audioLevel > 5 && (
         <div
-          className="absolute inset-0 rounded-full bg-blue-400 opacity-50 animate-ping"
+          className="absolute inset-0 rounded-full bg-cath-red-500 opacity-50 animate-ping"
           style={{ animationDuration: "1.5s" }}
         ></div>
       )}
       {micOn && audioLevel > 1 && (
         <div
-          className="absolute inset-0 rounded-full border-2 border-green-500 opacity-80 transition-all duration-100"
+          className="absolute inset-0 rounded-full border-2 border-emerald-500 opacity-80 transition-all duration-100"
           style={{
             transform: `scale(${1 + Math.min(audioLevel / 50, 0.4)})`,
           }}
@@ -23,8 +23,10 @@ const MicButton = ({ micOn, onToggle, stream, className = "" }) => {
 
       <button
         onClick={onToggle}
-        className={`relative z-10 flex h-12 w-12 items-center justify-center rounded-full transition ${
-          micOn ? "bg-blue-500 text-white" : "bg-gray-200 text-gray-600"
+        className={`relative z-10 flex h-12 w-12 items-center justify-center rounded-full transition shadow-lg ${
+          micOn
+            ? "bg-cath-red-600 text-white hover:bg-cath-red-700"
+            : "bg-gray-700 text-gray-400 hover:bg-gray-600"
         }`}
       >
         {micOn ? (
