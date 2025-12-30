@@ -60,7 +60,6 @@ const HeaderBar = () => {
         onClose={() => setDrawerOpen(false)}
         open={drawerOpen}
         classNames={{ body: "p-0" }}
-        width={280}
       >
         <div className="flex flex-col p-4 space-y-4">
           {/* Mobile Language Switcher */}

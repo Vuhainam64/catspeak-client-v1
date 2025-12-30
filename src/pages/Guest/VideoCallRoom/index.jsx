@@ -26,6 +26,7 @@ import VideoGrid from "@/components/video-call/VideoGrid"
 import ParticipantList from "@/components/video-call/ParticipantList"
 import ChatBox from "@/components/video-call/ChatBox"
 import MicButton from "@/components/video-call/MicButton"
+import WaitingScreen from "@/components/video-call/WaitingScreen"
 
 const VideoCallRoom = () => {
   const { id } = useParams()
@@ -37,10 +38,11 @@ const VideoCallRoom = () => {
   const [showParticipants, setShowParticipants] = useState(false)
   const [hasJoined, setHasJoined] = useState(false)
 
-  const { data: user, isLoading: isLoadingUser } = useGetProfileQuery()
+  const { data: userData, isLoading: isLoadingUser } = useGetProfileQuery()
 
   // Extract current user ID correctly from API response structure
-  const currentUserId = user?.data?.accountId
+  const user = userData?.data
+  const currentUserId = user?.accountId
 
   // We can still read token for legacy usage if needed, or rely on internal logic.
   // For useVideoCall/joinSession, they might need a token string if they don't use the state directly.
@@ -54,6 +56,8 @@ const VideoCallRoom = () => {
   } = useGetVideoSessionByIdQuery(id, {
     skip: !id,
   })
+
+  console.log(user)
 
   const [leaveSession, { isLoading: isLeaving }] =
     useLeaveVideoSessionMutation()
@@ -123,102 +127,20 @@ const VideoCallRoom = () => {
     return <Navigate to="/login" state={{ from: location }} replace />
   }
 
+  // ... inside component ...
+
   if (!hasJoined) {
     return (
-      <div className="flex h-screen w-full flex-col items-center justify-center bg-[#202124] text-white">
-        <div className="mb-8 text-center">
-          <h1 className="mb-2 text-3xl font-semibold">
-            {session?.topic || "Ready to join?"}
-          </h1>
-          <p className="text-gray-400">
-            {activeParticipants?.length || 0} participants in the call
-          </p>
-        </div>
-
-        <div className="relative mb-8 h-[400px] w-[700px] overflow-hidden rounded-xl bg-[#1f1f1f] shadow-2xl">
-          {/* Video Preview */}
-          {localStream && (
-            <video
-              ref={(video) => {
-                if (video) {
-                  video.srcObject = localStream
-                  if (micOn) video.muted = true // Mute local preview to prevent echo
-                }
-              }}
-              autoPlay
-              playsInline
-              muted // Always mute local video preview purely for UI
-              className={`h-full w-full object-cover ${
-                !cameraOn ? "hidden" : ""
-              }`}
-              style={{ transform: "scaleX(-1)" }} // Mirror effect
-            />
-          )}
-
-          {!cameraOn && (
-            <div className="flex h-full w-full items-center justify-center">
-              <div className="flex h-24 w-24 items-center justify-center rounded-full bg-blue-600 text-3xl font-bold text-white">
-                {user?.username?.[0]?.toUpperCase() || "U"}
-              </div>
-            </div>
-          )}
-
-          {/* Controls Overlay */}
-          <div className="absolute bottom-6 left-1/2 flex -translate-x-1/2 transform items-center gap-6">
-            <button
-              onClick={handleToggleMic}
-              className={`flex h-14 w-14 items-center justify-center rounded-full border shadow-lg transition duration-200 ${
-                micOn
-                  ? "border-transparent bg-blue-600 text-white hover:bg-blue-700"
-                  : "border-gray-500 bg-[#ea4335] text-white hover:bg-[#d93025]"
-              }`}
-            >
-              {micOn ? (
-                <FiMic className="h-6 w-6" />
-              ) : (
-                <FiMicOff className="h-6 w-6" />
-              )}
-            </button>
-
-            <button
-              onClick={handleToggleCam}
-              className={`flex h-14 w-14 items-center justify-center rounded-full border shadow-lg transition duration-200 ${
-                cameraOn
-                  ? "border-transparent bg-blue-600 text-white hover:bg-blue-700"
-                  : "border-gray-500 bg-[#ea4335] text-white hover:bg-[#d93025]"
-              }`}
-            >
-              {cameraOn ? (
-                <FiVideo className="h-6 w-6" />
-              ) : (
-                <FiVideoOff className="h-6 w-6" />
-              )}
-            </button>
-          </div>
-
-          {!micOn && (
-            <div className="absolute top-4 right-4 rounded bg-[#202124]/80 px-3 py-1 text-sm font-medium backdrop-blur-sm">
-              <div className="flex items-center gap-2 text-red-400">
-                <FiMicOff className="h-4 w-4" />
-                Mic Off
-              </div>
-            </div>
-          )}
-        </div>
-
-        <div className="flex flex-col items-center gap-4">
-          <button
-            onClick={() => setHasJoined(true)}
-            className="rounded-full bg-blue-600 px-12 py-3 text-lg font-bold text-white shadow-lg transition duration-200 hover:bg-blue-700 hover:shadow-xl active:scale-95"
-          >
-            Join now
-          </button>
-          <div className="text-sm text-gray-400">
-            joined as{" "}
-            <span className="text-gray-200 font-medium">{user?.username}</span>
-          </div>
-        </div>
-      </div>
+      <WaitingScreen
+        session={session}
+        localStream={localStream}
+        micOn={micOn}
+        cameraOn={cameraOn}
+        user={user}
+        onToggleMic={handleToggleMic}
+        onToggleCam={handleToggleCam}
+        onJoin={() => setHasJoined(true)}
+      />
     )
   }
 

@@ -1,14 +1,17 @@
-import React from 'react'
+import React from "react"
 
 /**
  * BubblePillMessage
  * Nút dạng “speech bubble / pill” đỏ như hình (có thể chứa icon + text qua children).
  */
-const BubblePillMessage = ({ className = '', children, ...rest }) => {
+const BubblePillMessage = ({ className = "", children, asChild, ...rest }) => {
   return (
     <button
       type="button"
-      className={['relative inline-flex items-center justify-center', className].join(' ')}
+      className={[
+        "relative inline-flex items-center justify-center",
+        className,
+      ].join(" ")}
       {...rest}
     >
       <svg
@@ -23,10 +26,10 @@ const BubblePillMessage = ({ className = '', children, ...rest }) => {
           <div
             xmlns="http://www.w3.org/1999/xhtml"
             style={{
-              backdropFilter: 'blur(2px)',
-              clipPath: 'url(#bgblur_0_2386_4248_clip_path)',
-              height: '100%',
-              width: '100%',
+              backdropFilter: "blur(2px)",
+              clipPath: "url(#bgblur_0_2386_4248_clip_path)",
+              height: "100%",
+              width: "100%",
             }}
           />
         </foreignObject>
@@ -47,5 +50,3 @@ const BubblePillMessage = ({ className = '', children, ...rest }) => {
 }
 
 export default BubblePillMessage
-
-

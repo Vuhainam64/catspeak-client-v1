@@ -2,7 +2,7 @@ import { useState, useMemo } from "react"
 import { useNavigate } from "react-router-dom"
 import { useCreateVideoSessionMutation } from "@/store/api/videoSessionsApi"
 import { useGetRoomsQuery } from "@/store/api/roomsApi"
-import { slides } from "../constants"
+import { slides } from "@/constants/constants"
 
 export const useRoomsPageLogic = () => {
   const [active, setActive] = useState(0)
@@ -17,10 +17,29 @@ export const useRoomsPageLogic = () => {
   const navigate = useNavigate()
   const [createVideoSession, { isLoading: isCreating }] =
     useCreateVideoSessionMutation()
-  const { data, isLoading: isLoadingRooms } = useGetRoomsQuery()
-  const rooms = Array.isArray(data) ? data : []
+
+  // Pass pagination params to the query
+  const { data: responseData, isLoading: isLoadingRooms } = useGetRoomsQuery({
+    page,
+    pageSize,
+  })
+
+  // Extract rooms and pagination data safely
+  const rooms = Array.isArray(responseData?.data) ? responseData.data : []
+  const additionalData = responseData?.additionalData || {}
+  const totalCount = additionalData.totalCount || 0
+
+  // Note: API returns totalPages, but we can also calculate it or just use it.
+  // The API response says "totalPages": 8.
+  const apiTotalPages = additionalData.totalPages || 0
+
+  // Separate loading states
+  const [isCreatingOneOnOne, setIsCreatingOneOnOne] = useState(false)
+  const [isCreatingStudyGroup, setIsCreatingStudyGroup] = useState(false)
 
   const handleCreateOneOnOneSession = async () => {
+    if (isCreatingOneOnOne) return
+    setIsCreatingOneOnOne(true)
     try {
       const response = await createVideoSession({
         name: "Quick Chat",
@@ -34,10 +53,14 @@ export const useRoomsPageLogic = () => {
       }
     } catch (error) {
       console.error("Failed to create 1:1 session:", error)
+    } finally {
+      setIsCreatingOneOnOne(false)
     }
   }
 
   const handleCreateStudyGroupSession = async () => {
+    if (isCreatingStudyGroup) return
+    setIsCreatingStudyGroup(true)
     try {
       const response = await createVideoSession({
         name: "Study Group",
@@ -51,16 +74,19 @@ export const useRoomsPageLogic = () => {
       }
     } catch (error) {
       console.error("Failed to create study group session:", error)
+    } finally {
+      setIsCreatingStudyGroup(false)
     }
   }
 
   const current = useMemo(() => slides[active], [active])
 
-  const totalPages = Math.max(1, Math.ceil(rooms.length / pageSize))
-  const pagedRooms = useMemo(
-    () => rooms.slice((page - 1) * pageSize, page * pageSize),
-    [page, rooms, pageSize]
-  )
+  // Total pages now comes from API or calculated from totalCount if needed.
+  // Using Math.max(1, ...) ensures at least 1 page.
+  const totalPages = Math.max(1, apiTotalPages)
+
+  // Rooms are already paged by the API, so we just return them.
+  const pagedRooms = rooms
 
   const handleSendLive = (msg) => {
     if (!msg?.trim()) return
@@ -80,9 +106,11 @@ export const useRoomsPageLogic = () => {
       liveInput,
       userLetters,
       totalLetters,
-      isCreating,
+      isCreating: isCreating || isCreatingOneOnOne || isCreatingStudyGroup, // Backward compatibility or global loading
+      isCreatingOneOnOne,
+      isCreatingStudyGroup,
       isLoadingRooms,
-      rooms,
+      rooms, // This is the current page's rooms
     },
     derived: {
       current,

@@ -5,7 +5,8 @@ export const roomsApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     // Get all rooms created by the current user
     getRooms: builder.query({
-      query: () => "/rooms",
+      query: ({ page = 1, pageSize = 10 } = {}) =>
+        `/rooms?page=${page}&pageSize=${pageSize}`,
       providesTags: ["Rooms"],
     }),
 

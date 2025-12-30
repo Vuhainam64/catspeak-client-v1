@@ -1,15 +1,16 @@
 import React from "react"
+import { Pagination } from "antd"
+import { motion } from "framer-motion"
 import RoomTabs from "@/components/rooms/RoomTabs"
 import FiltersSidebar from "@/components/rooms/FiltersSidebar"
 import ClassSidebar from "@/components/rooms/ClassSidebar"
 import RoomsGrid from "@/components/rooms/RoomsGrid"
+import { useRoomsPageLogic } from "@/hooks/rooms/useRoomsPageLogic"
+import WelcomeSection from "@/components/rooms/WelcomeSection"
+import SessionActionButtons from "@/components/rooms/SessionActionButtons"
+import HeroCarousel from "@/components/rooms/HeroCarousel"
+import { roomFilters, topicsFilters } from "@/constants/constants"
 import LiveMessages from "@/components/rooms/LiveMessages"
-import ClassTab from "@/components/rooms/ClassTab"
-
-import { useRoomsPageLogic } from "./hooks/useRoomsPageLogic"
-import WelcomeSection from "./components/WelcomeSection"
-import HeroCarousel from "./components/HeroCarousel"
-import { roomFilters, topicsFilters } from "./constants"
 
 const RoomsPage = () => {
   const { state, derived, actions } = useRoomsPageLogic()
@@ -21,7 +22,7 @@ const RoomsPage = () => {
     liveInput,
     userLetters,
     totalLetters,
-    isCreating,
+    // isCreating, // Not strictly needed here anymore if we use split states directly
   } = state
   const { current, totalPages, pagedRooms } = derived
   const {
@@ -45,9 +46,14 @@ const RoomsPage = () => {
           <WelcomeSection
             allowConnect={allowConnect}
             setAllowConnect={setAllowConnect}
+          />
+
+          {/* Session Creation Buttons (Moved from WelcomeSection) */}
+          <SessionActionButtons
             handleCreateOneOnOneSession={handleCreateOneOnOneSession}
             handleCreateStudyGroupSession={handleCreateStudyGroupSession}
-            isCreating={isCreating}
+            isCreatingOneOnOne={state.isCreatingOneOnOne}
+            isCreatingStudyGroup={state.isCreatingStudyGroup}
           />
         </div>
 
@@ -78,12 +84,20 @@ const RoomsPage = () => {
           <RoomTabs activeTab={tab} onChange={setTab} />
 
           {tab === "communicate" ? (
-            <RoomsGrid
-              rooms={pagedRooms}
-              page={page}
-              totalPages={totalPages}
-              onChangePage={setPage}
-            />
+            <>
+              <RoomsGrid rooms={pagedRooms} />
+
+              {/* Pagination (Moved from RoomsGrid) */}
+              <div className="mt-6 flex justify-center">
+                <Pagination
+                  current={page} // page is 1-indexed
+                  pageSize={1} // Treat each "item" as a page since we only have totalPages
+                  total={totalPages}
+                  onChange={setPage}
+                  showSizeChanger={false}
+                />
+              </div>
+            </>
           ) : tab === "class" ? (
             <ClassTab />
           ) : (
