@@ -32,22 +32,24 @@ const ChatBox = ({
 
   return (
     <div
-      className={`flex h-full flex-col border-l border-[#303134] bg-[#202124] ${className}`}
+      className={`flex h-full flex-col border-l border-gray-200 bg-white ${className}`}
     >
-      <div className="border-b border-[#303134] px-4 py-3">
-        <h3 className="text-sm font-semibold text-gray-100">Room Message</h3>
+      <div className="border-b border-gray-200 px-4 py-3">
+        <h3 className="text-sm font-semibold text-headingColor">
+          Room Message
+        </h3>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-transparent">
         {messages.length === 0 ? (
-          <div className="text-center text-gray-500 mt-10">No messages yet</div>
+          <div className="text-center text-gray-400 mt-10">No messages yet</div>
         ) : (
           messages.map((msg) => {
             if (msg.type === "system") {
               return (
                 <div
                   key={msg.id}
-                  className="text-xs text-center text-gray-500 italic my-2"
+                  className="text-xs text-center text-gray-400 italic my-2"
                 >
                   {msg.content}
                 </div>
@@ -70,10 +72,10 @@ const ChatBox = ({
                 }`}
               >
                 <div className="flex items-center gap-2 mb-1">
-                  <span className="text-xs font-bold text-gray-400">
+                  <span className="text-xs font-bold text-gray-500">
                     {senderName}
                   </span>
-                  <span className="text-[10px] text-gray-600">
+                  <span className="text-[10px] text-gray-400">
                     {new Date(msg.timestamp).toLocaleTimeString([], {
                       hour: "2-digit",
                       minute: "2-digit",
@@ -81,10 +83,10 @@ const ChatBox = ({
                   </span>
                 </div>
                 <div
-                  className={`px-3 py-2 rounded-lg text-sm max-w-[85%] break-words ${
+                  className={`px-3 py-2 rounded-lg text-sm max-w-[85%] break-words shadow-sm ${
                     isMe
-                      ? "bg-[#8ab4f8] text-[#202124]"
-                      : "bg-[#303134] text-gray-100"
+                      ? "bg-cath-orange-500 text-white"
+                      : "bg-gray-100 text-textColor border border-gray-100"
                   }`}
                 >
                   {msg.content}
@@ -106,12 +108,12 @@ const ChatBox = ({
             onChange={(e) => setMessage(e.target.value)}
             onKeyPress={handleKeyPress}
             placeholder={isConnected ? "Type Something..." : "Connecting..."}
-            className="flex-1 rounded-lg border border-[#3c4043] bg-[#2a2a2b] px-3 py-2 text-sm text-gray-100 placeholder:text-gray-500 focus:border-[#8ab4f8] focus:outline-none focus:ring-1 focus:ring-[#8ab4f8] disabled:opacity-50"
+            className="flex-1 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-headingColor placeholder:text-gray-400 focus:border-cath-orange-500 focus:outline-none focus:ring-1 focus:ring-cath-orange-500 disabled:opacity-50"
           />
           <button
             onClick={handleSend}
             disabled={!isConnected || !message.trim()}
-            className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#8ab4f8] text-[#202124] transition hover:bg-[#a6c8ff] disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex h-9 w-9 items-center justify-center rounded-lg bg-cath-orange-500 text-white transition hover:bg-cath-orange-600 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
           >
             <FiSend className="h-4 w-4" />
           </button>

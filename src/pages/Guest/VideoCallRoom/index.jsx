@@ -1,133 +1,84 @@
-import React, { useState, useEffect } from "react"
-import { useParams, useNavigate, Navigate, useLocation } from "react-router-dom"
+import React from "react"
+import { Navigate } from "react-router-dom"
 import {
-  FiMic,
-  FiMicOff,
   FiVideo,
   FiVideoOff,
   FiMonitor,
-  FiCircle,
   FiMessageCircle,
   FiMoreVertical,
   FiUsers,
   FiChevronRight,
-  FiSend,
 } from "react-icons/fi"
-import toast from "react-hot-toast"
-import { useGetProfileQuery } from "@/store/api/authApi"
 
-import {
-  useGetVideoSessionByIdQuery,
-  useLeaveVideoSessionMutation,
-  useJoinVideoSessionMutation,
-} from "@/store/api/videoSessionsApi"
-import { useVideoCall } from "@/hooks/useVideoCall"
 import VideoGrid from "@/components/video-call/VideoGrid"
 import ParticipantList from "@/components/video-call/ParticipantList"
 import ChatBox from "@/components/video-call/ChatBox"
 import MicButton from "@/components/video-call/MicButton"
 import WaitingScreen from "@/components/video-call/WaitingScreen"
+import {
+  VideoCallProvider,
+  useVideoCallContext,
+} from "@/context/VideoCallContext"
 
-const VideoCallRoom = () => {
-  const { id } = useParams()
-  const navigate = useNavigate()
-  const location = useLocation()
-  const [micOn, setMicOn] = useState(true)
-  const [cameraOn, setCameraOn] = useState(true)
-  const [showChat, setShowChat] = useState(false)
-  const [showParticipants, setShowParticipants] = useState(false)
-  const [hasJoined, setHasJoined] = useState(false)
-
-  const { data: userData, isLoading: isLoadingUser } = useGetProfileQuery()
-
-  // Extract current user ID correctly from API response structure
-  const user = userData?.data
-  const currentUserId = user?.accountId
-
-  // We can still read token for legacy usage if needed, or rely on internal logic.
-  // For useVideoCall/joinSession, they might need a token string if they don't use the state directly.
-  // Since we are authenticated if we pass the above check, the token in LS should be valid.
-  const token = localStorage.getItem("token")
-
+const VideoCallRoomContent = () => {
   const {
-    data: session,
-    isLoading: isLoadingSession,
-    error: sessionError,
-  } = useGetVideoSessionByIdQuery(id, {
-    skip: !id,
-  })
-
-  console.log(user)
-
-  const [leaveSession, { isLoading: isLeaving }] =
-    useLeaveVideoSessionMutation()
-  const [joinSession] = useJoinVideoSessionMutation()
-
-  // Ensure user joins the session via API when accessing directly
-  // Ensure user joins the session via API when accessing directly (only after manual join)
-  useEffect(() => {
-    if (id && token && hasJoined) {
-      joinSession(id)
-        .unwrap()
-        .catch((err) => {
-          console.error("Failed to join session via API:", err)
-        })
-    }
-  }, [id, token, joinSession, hasJoined])
-
-  // Use Custom Hook for WebRTC logic
-  const {
-    connection,
+    id,
+    location,
+    micOn,
+    cameraOn,
+    showChat,
+    setShowChat,
+    showParticipants,
+    setShowParticipants,
+    hasJoined,
+    setHasJoined,
+    user,
+    isLoadingUser,
+    currentUserId,
+    session,
+    isLeaving,
     localStream,
     peers,
-    participants: activeParticipants,
+    activeParticipants,
     messages,
     isConnected,
-    toggleAudio,
-    toggleVideo,
-    sendMessage,
-  } = useVideoCall(id, session?.participants, currentUserId, hasJoined)
+    handleToggleMic,
+    handleToggleCam,
+    handleSendMessage,
+    handleLeaveSession,
+    handleCopyLink,
+  } = useVideoCallContext()
 
-  const handleToggleMic = () => {
-    const newState = !micOn
-    setMicOn(newState)
-    toggleAudio(newState)
-  }
+  // Unread Messages Logic
+  const [unreadMessages, setUnreadMessages] = React.useState(0)
+  const prevMessagesLength = React.useRef(messages.length)
 
-  const handleToggleCam = () => {
-    const newState = !cameraOn
-    setCameraOn(newState)
-    toggleVideo(newState)
-  }
-
-  const handleSendMessage = (text) => {
-    sendMessage(text).catch((err) =>
-      console.error("Failed to send message", err)
-    )
-  }
-
-  const handleLeaveSession = async () => {
-    try {
-      await leaveSession(id).unwrap()
-      navigate("/rooms")
-    } catch (error) {
-      console.error("Failed to leave session:", error)
-      navigate("/rooms")
+  React.useEffect(() => {
+    if (messages.length > prevMessagesLength.current) {
+      if (!showChat) {
+        // Count new messages not from me
+        let newUnread = 0
+        for (let i = prevMessagesLength.current; i < messages.length; i++) {
+          if (String(messages[i].senderId) !== String(currentUserId)) {
+            newUnread++
+          }
+        }
+        setUnreadMessages((prev) => prev + newUnread)
+      }
     }
-  }
+    prevMessagesLength.current = messages.length
+  }, [messages, showChat, currentUserId])
 
-  const handleCopyLink = () => {
-    const url = window.location.href
-    navigator.clipboard.writeText(url)
-    toast.success("Link copied to clipboard!")
-  }
+  React.useEffect(() => {
+    if (showChat) {
+      setUnreadMessages(0)
+    }
+  }, [showChat])
 
   // Let the API handle 401. If we have no user and not loading, it means we failed to auth.
   if (!isLoadingUser && !user) {
     return <Navigate to="/login" state={{ from: location }} replace />
   }
-
-  // ... inside component ...
 
   if (!hasJoined) {
     return (
@@ -145,18 +96,18 @@ const VideoCallRoom = () => {
   }
 
   return (
-    <div className="flex h-full w-full flex-col bg-[#1f1f1f] text-gray-100">
+    <div className="flex h-full w-full flex-col bg-primary2 text-textColor font-sans">
       {/* Top Bar */}
-      <div className="flex items-center justify-between border-b border-[#303134] bg-[#202124] px-6 py-4">
+      <div className="flex items-center justify-between border-b border-gray-200 bg-white px-6 py-4 shadow-sm">
         <div className="flex items-center gap-4">
-          <div className="flex h-8 w-8 items-center justify-center rounded bg-[#990011] text-white font-bold">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-cath-red-700 text-white font-bold shadow-md">
             CA
           </div>
           <div>
-            <div className="text-sm font-semibold text-gray-100">
+            <div className="text-sm font-semibold text-headingColor">
               Topic : {session?.topic || "General"}
             </div>
-            <div className="text-xs text-gray-400">
+            <div className="text-xs text-lighttextGray">
               {new Date().toLocaleDateString()}
             </div>
           </div>
@@ -165,7 +116,7 @@ const VideoCallRoom = () => {
         <div className="flex items-center gap-4">
           <button
             onClick={handleCopyLink}
-            className="flex items-center gap-2 rounded-lg bg-blue-500 px-3 py-1.5 text-sm font-semibold text-white hover:bg-blue-600 transition"
+            className="flex items-center gap-2 rounded-lg bg-cath-orange-500 px-3 py-1.5 text-sm font-semibold text-white hover:bg-cath-orange-600 transition shadow-sm"
             title="Click to copy link"
           >
             <FiChevronRight className="h-4 w-4" />
@@ -177,7 +128,8 @@ const VideoCallRoom = () => {
       {/* Main Content Area */}
       <div className="flex flex-1 overflow-hidden">
         {/* Video Area */}
-        <div className="flex flex-1 flex-col bg-gradient-to-br from-[#2a1818] via-[#1f1f1f] to-[#141414]">
+        <div className="relative flex flex-1 flex-col bg-gradient-to-br from-primary2 via-white to-primary2">
+          <div className="absolute inset-0 bg-[url('/bg-pattern.svg')] opacity-[0.03] pointer-events-none" />
           <VideoGrid
             localStream={localStream}
             peers={peers}
@@ -188,7 +140,7 @@ const VideoCallRoom = () => {
 
         {/* Side Panel (Chat or Participants) */}
         {(showChat || showParticipants) && (
-          <div className="w-80 flex flex-col">
+          <div className="w-80 flex flex-col border-l border-gray-200 bg-white">
             {showParticipants && (
               <ParticipantList
                 participants={activeParticipants}
@@ -204,7 +156,7 @@ const VideoCallRoom = () => {
                 allParticipants={activeParticipants}
                 onSendMessage={handleSendMessage}
                 isConnected={isConnected}
-                className="w-80"
+                className="w-full h-full"
               />
             )}
           </div>
@@ -212,12 +164,12 @@ const VideoCallRoom = () => {
       </div>
 
       {/* Control Bar */}
-      <div className="flex items-center justify-between border-t border-[#303134] bg-[#202124] px-6 py-4">
-        <div className="text-lg font-semibold text-gray-200">
-          {/* Timer could go here */}
+      <div className="flex items-center justify-between border-t border-gray-200 bg-white px-6 py-4 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
+        <div className="text-lg font-semibold text-headingColor w-32">
+          {/* Timer Placeholder */}
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-4">
           <MicButton
             micOn={micOn}
             onToggle={handleToggleMic}
@@ -227,8 +179,10 @@ const VideoCallRoom = () => {
 
           <button
             onClick={handleToggleCam}
-            className={`flex h-12 w-12 items-center justify-center rounded-full transition ${
-              cameraOn ? "bg-blue-500 text-white" : "bg-gray-200 text-gray-600"
+            className={`flex h-12 w-12 items-center justify-center rounded-full transition shadow-md border ${
+              cameraOn
+                ? "bg-cath-red-600 text-white border-transparent hover:bg-cath-red-700"
+                : "bg-white text-cath-red-400 border-gray-200 hover:bg-primary2"
             }`}
           >
             {cameraOn ? (
@@ -238,9 +192,11 @@ const VideoCallRoom = () => {
             )}
           </button>
 
-          <button className="flex h-12 w-12 items-center justify-center rounded-full bg-[#3c4043] text-white transition hover:bg-[#5f6368]">
+          <button className="flex h-12 w-12 items-center justify-center rounded-full bg-white text-gray-500 border border-gray-200 transition hover:bg-primary2 hover:text-headingColor shadow-sm">
             <FiMonitor className="h-5 w-5" />
           </button>
+
+          <div className="h-8 w-px bg-gray-200 mx-2" />
 
           {/* Participants Toggle */}
           <button
@@ -248,47 +204,58 @@ const VideoCallRoom = () => {
               setShowParticipants(!showParticipants)
               setShowChat(false)
             }}
-            className={`flex h-12 w-12 items-center justify-center rounded-full transition ${
+            className={`flex h-12 w-12 items-center justify-center rounded-full transition shadow-md border ${
               showParticipants
-                ? "bg-[#8ab4f8] text-[#202124]"
-                : "bg-[#3c4043] text-white hover:bg-[#5f6368]"
+                ? "bg-cath-orange-500 text-white border-transparent"
+                : "bg-white text-gray-500 border-gray-200 hover:bg-primary2 hover:text-headingColor"
             }`}
           >
             <FiUsers className="h-5 w-5" />
           </button>
-
-          {/* <button className="flex h-12 w-12 items-center justify-center rounded-full bg-red-600 text-white transition hover:bg-red-700">
-            <div className="h-3 w-3 rounded-full bg-white" />
-          </button> */}
 
           <button
             onClick={() => {
               setShowChat(!showChat)
               setShowParticipants(false)
             }}
-            className={`flex h-12 w-12 items-center justify-center rounded-full transition ${
+            className={`flex h-12 w-12 items-center justify-center rounded-full transition shadow-md border relative ${
               showChat
-                ? "bg-[#8ab4f8] text-[#202124]"
-                : "bg-[#3c4043] text-white"
+                ? "bg-cath-orange-500 text-white border-transparent"
+                : "bg-white text-gray-500 border-gray-200 hover:bg-primary2 hover:text-headingColor"
             }`}
           >
             <FiMessageCircle className="h-5 w-5" />
+            {unreadMessages > 0 && (
+              <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-[10px] font-bold text-white shadow-sm animate-bounce">
+                {unreadMessages > 9 ? "9+" : unreadMessages}
+              </span>
+            )}
           </button>
 
-          <button className="flex h-12 w-12 items-center justify-center rounded-full bg-[#3c4043] text-white transition hover:bg-[#5f6368]">
+          <button className="flex h-12 w-12 items-center justify-center rounded-full bg-white text-gray-500 border border-gray-200 transition hover:bg-primary2 hover:text-headingColor shadow-sm">
             <FiMoreVertical className="h-5 w-5" />
           </button>
         </div>
 
-        <button
-          onClick={handleLeaveSession}
-          disabled={isLeaving}
-          className="rounded-lg bg-red-600 px-6 py-2 text-sm font-semibold text-white transition hover:bg-red-700 disabled:bg-red-400"
-        >
-          {isLeaving ? "Leaving..." : "Leave Call"}
-        </button>
+        <div className="flex justify-end w-32">
+          <button
+            onClick={handleLeaveSession}
+            disabled={isLeaving}
+            className="rounded-full bg-red-50 px-6 py-2.5 text-sm font-semibold text-red-600 ring-1 ring-red-200 transition hover:bg-red-100 hover:ring-red-300 disabled:opacity-50"
+          >
+            {isLeaving ? "Leaving..." : "Leave"}
+          </button>
+        </div>
       </div>
     </div>
+  )
+}
+
+const VideoCallRoom = () => {
+  return (
+    <VideoCallProvider>
+      <VideoCallRoomContent />
+    </VideoCallProvider>
   )
 }
 
