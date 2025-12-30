@@ -1,4 +1,4 @@
-import { Navigate } from 'react-router-dom'
+import { Navigate } from "react-router-dom"
 
 /**
  * PublicRoute - Component để điều hướng các route public
@@ -11,7 +11,7 @@ import { Navigate } from 'react-router-dom'
 const PublicRoute = ({
   children,
   isAuthenticated = false,
-  redirectTo = '/app',
+  redirectTo = "/app",
 }) => {
   if (isAuthenticated) {
     return <Navigate to={redirectTo} replace />
@@ -21,4 +21,3 @@ const PublicRoute = ({
 }
 
 export default PublicRoute
-

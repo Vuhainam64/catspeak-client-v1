@@ -1,10 +1,8 @@
 import React from "react"
 import { FiMic, FiMicOff } from "react-icons/fi"
 import useAudioLevel from "@/hooks/useAudioLevel"
-
 const MicButton = ({ micOn, onToggle, stream, className = "" }) => {
   const audioLevel = useAudioLevel(stream)
-
   return (
     <div className={`relative flex items-center justify-center ${className}`}>
       {/* Audio Ripple/Indicator */}

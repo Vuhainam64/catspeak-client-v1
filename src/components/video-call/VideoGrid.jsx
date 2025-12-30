@@ -24,7 +24,25 @@ const VideoGrid = ({ localStream, peers, participants, currentUserId }) => {
   return (
     <div className={`grid h-full w-full gap-4 ${gridClassName} p-4`}>
       {participants.map((participant) => {
-        const isLocal = String(participant.accountId) === String(currentUserId)
+        // Debugging ID mismatch - DEEP LOG
+        console.log(`[VideoGrid] Checking ${participant.username}`, {
+          p_accountId: participant.accountId,
+          p_userId: participant.userId,
+          p_id: participant.id,
+          currentUserId: currentUserId,
+          match: String(participant.accountId) === String(currentUserId),
+        })
+
+        const isLocal =
+          (currentUserId &&
+            participant.accountId &&
+            String(participant.accountId) === String(currentUserId)) ||
+          (currentUserId &&
+            participant.userId &&
+            String(participant.userId) === String(currentUserId)) ||
+          (currentUserId &&
+            participant.id &&
+            String(participant.id) === String(currentUserId))
         // If local, use localStream. If remote, look up in peers.
         const stream = isLocal
           ? localStream
@@ -41,6 +59,7 @@ const VideoGrid = ({ localStream, peers, participants, currentUserId }) => {
               avatar={participant.avatarImageUrl}
               isLocal={isLocal}
               micOn={participant.isMicOn !== false} // Default to true if undefined
+              videoOn={participant.isCameraOn !== false} // Default to true if undefined
             />
           </div>
         )
