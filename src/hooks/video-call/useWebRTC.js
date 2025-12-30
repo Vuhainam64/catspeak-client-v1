@@ -83,7 +83,7 @@ export const useWebRTC = (sessionId, localStream, connection) => {
       // Handle ICE
       pc.onicecandidate = (event) => {
         if (event.candidate) {
-          console.log(`[useWebRTC] ICE Candidate generated for ${targetId}`)
+          // console.log(`[useWebRTC] ICE Candidate generated for ${targetId}`)
           if (connection?.state === signalR.HubConnectionState.Connected) {
             connection
               .invoke(
@@ -123,12 +123,20 @@ export const useWebRTC = (sessionId, localStream, connection) => {
       pc.ontrack = (event) => {
         console.log(
           `[useWebRTC] OnTrack received for ${targetId}`,
-          event.streams[0]?.id
+          event.streams[0]?.id,
+          event.track.kind
         )
-        setPeers((prev) => ({
-          ...prev,
-          [targetId]: { ...prev[targetId], stream: event.streams[0] },
-        }))
+        setPeers((prev) => {
+          const newPeers = {
+            ...prev,
+            [targetId]: { ...prev[targetId], stream: event.streams[0] },
+          }
+          console.log(
+            `[useWebRTC] Updated peers state for ${targetId}`,
+            newPeers
+          )
+          return newPeers
+        })
       }
 
       // Store PC

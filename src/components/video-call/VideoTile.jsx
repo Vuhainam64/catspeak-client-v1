@@ -38,9 +38,21 @@ const VideoTile = ({
         <video
           autoPlay
           playsInline
-          muted={isLocal} // Always mute local video to prevent feedback
+          muted={isLocal} // Always mute local video
           ref={videoRef}
           className={`h-full w-full object-cover ${videoOn ? "" : "hidden"}`}
+          onLoadedMetadata={() => {
+            console.log(`[VideoTile] onLoadedMetadata for ${name}`)
+            if (videoRef.current) {
+              videoRef.current
+                .play()
+                .catch((e) => console.error("[VideoTile] Play error:", e))
+            }
+          }}
+          onError={(e) =>
+            console.error(`[VideoTile] Video Error for ${name}:`, e)
+          }
+          onCanPlay={() => console.log(`[VideoTile] CanPlay for ${name}`)}
         />
       )}
 

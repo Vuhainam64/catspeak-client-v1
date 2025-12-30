@@ -24,7 +24,7 @@ const RoomsPage = () => {
     totalLetters,
     // isCreating, // Not strictly needed here anymore if we use split states directly
   } = state
-  const { current, totalPages, pagedRooms } = derived
+  const { current, totalPages, pagedRooms, slides } = derived
   const {
     setActive,
     setAllowConnect,
@@ -65,6 +65,7 @@ const RoomsPage = () => {
             current={current}
             next={next}
             prev={prev}
+            slides={slides}
           />
         </div>
       </div>

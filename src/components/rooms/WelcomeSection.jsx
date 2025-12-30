@@ -1,27 +1,39 @@
 import React from "react"
+import { useLanguage } from "@/context/LanguageContext"
+import { useGetProfileQuery } from "@/store/api/authApi"
 
 const WelcomeSection = ({ allowConnect, setAllowConnect }) => {
+  const { t } = useLanguage()
+  const { welcome } = t.rooms
+  const { data: userData } = useGetProfileQuery()
+  const user = userData?.data
+
   return (
     <div className="relative pl-6 h-full">
       {/* Decorative connecting lines */}
       <div className="absolute left-2 top-4 h-0.5 w-20 bg-[#990011]" />
       <div className="absolute left-2 top-4 h-[220px] w-0.5 bg-[#990011]" />
 
-      <p className="text-3xl font-bold mb-1 ml-20">Hi Quỳnh,</p>
+      <p className="text-3xl font-bold mb-1 ml-20">
+        {welcome.greeting.replace("{{name}}", user?.username || "Friend")}
+      </p>
       <h2 className="text-3xl font-bold text-[#990011] drop-shadow-[0_2px_6px_rgba(0,0,0,0.15)]">
-        Happy Halloween
+        {welcome.title}
       </h2>
       <p className="mt-4 text-sm leading-relaxed text-gray-800">
-        Halloween is nominally a{" "}
-        <span className="font-semibold text-[#990011]">Christian holiday</span>{" "}
-        honoring the souls of saints and other souls who have been blessed. It
-        descends from an{" "}
+        {welcome.description.part1}
         <span className="font-semibold text-[#990011]">
-          ancient Celtic festival
+          {welcome.description.highlight1}
         </span>{" "}
-        of the dead that marked the official end of the growing season.
+        {welcome.description.part2}
+        <span className="font-semibold text-[#990011]">
+          {welcome.description.highlight2}
+        </span>{" "}
+        {welcome.description.part3}
       </p>
-      <p className="mt-3 text-sm italic text-gray-600">Trick or Treat</p>
+      <p className="mt-3 text-sm italic text-gray-600">
+        {welcome.trickOrTreat}
+      </p>
 
       <div className="mt-8 inline-flex items-center gap-3 rounded-full bg-gray-50 px-4 py-2 text-sm text-[#990011] shadow">
         <button
@@ -40,7 +52,7 @@ const WelcomeSection = ({ allowConnect, setAllowConnect }) => {
             ].join(" ")}
           />
         </button>
-        Cho phép kết nối với bạn bè quốc tế
+        {welcome.allowConnect}
       </div>
     </div>
   )
