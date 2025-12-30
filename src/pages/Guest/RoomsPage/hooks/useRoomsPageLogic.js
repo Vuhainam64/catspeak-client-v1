@@ -17,7 +17,8 @@ export const useRoomsPageLogic = () => {
   const navigate = useNavigate()
   const [createVideoSession, { isLoading: isCreating }] =
     useCreateVideoSessionMutation()
-  const { data: rooms = [], isLoading: isLoadingRooms } = useGetRoomsQuery()
+  const { data, isLoading: isLoadingRooms } = useGetRoomsQuery()
+  const rooms = Array.isArray(data) ? data : []
 
   const handleCreateOneOnOneSession = async () => {
     try {
