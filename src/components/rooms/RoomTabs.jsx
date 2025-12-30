@@ -1,34 +1,44 @@
-import React from "react";
-import { FiMessageCircle, FiMonitor, FiUsers, FiLayers } from "react-icons/fi";
+import React from "react"
+import { FiMessageCircle, FiMonitor, FiUsers, FiLayers } from "react-icons/fi"
+import { motion } from "framer-motion"
 
 const tabs = [
-  { key: "communicate", icon: FiMessageCircle },
-  { key: "teaching", icon: FiMonitor },
-  { key: "group", icon: FiUsers },
-  { key: "class", icon: FiLayers },
-];
+  { key: "communicate", label: "Giao tiếp", icon: FiMessageCircle },
+  { key: "teaching", label: "Giảng dạy", icon: FiMonitor },
+  { key: "group", label: "Nhóm", icon: FiUsers },
+  { key: "class", label: "Lớp học", icon: FiLayers },
+]
 
 const RoomTabs = ({ activeTab, onChange }) => {
   return (
-    <div className="mt-6 flex items-center justify-center gap-10 px-6">
+    <div className="mb-6 flex w-full flex-wrap items-center justify-start gap-3 border-b border-gray-100 pb-2">
       {tabs.map((item) => {
-        const Icon = item.icon;
-        const active = activeTab === item.key;
+        const Icon = item.icon
+        const active = activeTab === item.key
         return (
           <button
             key={item.key}
             onClick={() => onChange(item.key)}
-            className="relative flex flex-col items-center gap-2 text-2xl transition"
+            className={`group relative flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold transition-all duration-300 ${
+              active
+                ? "bg-[#990011] text-white shadow-md shadow-red-900/20"
+                : "bg-white text-gray-500 hover:bg-gray-50 hover:text-gray-900"
+            }`}
             aria-pressed={active}
           >
-            <Icon className={`h-8 w-8 ${active ? "text-[#990011]" : "text-gray-300"}`} />
-            {active && <span className="block h-0.5 w-10 rounded-full bg-[#990011]" />}
+            <Icon
+              className={`h-4 w-4 ${
+                active
+                  ? "text-white"
+                  : "text-gray-400 group-hover:text-gray-600"
+              }`}
+            />
+            {item.label}
           </button>
-        );
+        )
       })}
     </div>
-  );
-};
+  )
+}
 
-export default RoomTabs;
-
+export default RoomTabs

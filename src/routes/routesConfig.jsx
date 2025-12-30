@@ -1,12 +1,22 @@
-import { AdminLayout, MainLayout, UserLayout, VideoCallLayout } from '@layouts'
-import { PageNotFound, ForbiddenPage } from '@pages/ErrorPage'
-import { HomePage, PolicyPage, RoomsPage, VideoCallRoom, LoginPage, RegisterPage, RoomDetailPage } from '@pages/Guest'
-import { UserDashboard, UserProfile, UserSetting } from '@pages/User'
-import { AdminPage } from '@pages/Admin'
+import { AdminLayout, MainLayout, UserLayout, VideoCallLayout } from "@layouts"
+import { PageNotFound, ForbiddenPage } from "@pages/ErrorPage"
+import {
+  HomePage,
+  PolicyPage,
+  RoomsPage,
+  VideoCallRoom,
+  LoginPage,
+  RegisterPage,
+  RoomDetailPage,
+} from "@pages/Guest"
+import { UserDashboard, UserProfile, UserSetting } from "@pages/User"
+import { AdminPage } from "@pages/Admin"
+
+import GuestGuard from "@components/Guards/GuestGuard"
 
 const routesConfig = [
   {
-    path: '/',
+    path: "/",
     element: <MainLayout />,
     children: [
       {
@@ -14,37 +24,37 @@ const routesConfig = [
         element: <HomePage />,
       },
       {
-        path: 'rooms',
+        path: "rooms",
         element: <RoomsPage />,
       },
     ],
   },
   {
-    path: '/room',
+    path: "/room",
     element: <MainLayout />,
     children: [
       {
-        path: ':id',
+        path: ":id",
         element: <RoomDetailPage />,
       },
     ],
   },
   {
-    path: '/meet',
+    path: "/meet",
     element: <VideoCallLayout />,
     children: [
       {
-        path: ':id',
+        path: ":id",
         element: <VideoCallRoom />,
       },
     ],
   },
   {
-    path: '/policy',
+    path: "/policy",
     element: <PolicyPage />,
   },
   {
-    path: '/app',
+    path: "/app",
     element: <UserLayout />,
     children: [
       {
@@ -52,17 +62,17 @@ const routesConfig = [
         element: <UserDashboard />,
       },
       {
-        path: 'setting',
+        path: "setting",
         element: <UserSetting />,
       },
       {
-        path: 'profile',
+        path: "profile",
         element: <UserProfile />,
       },
     ],
   },
   {
-    path: '/admin',
+    path: "/admin",
     element: <AdminLayout />,
     children: [
       {
@@ -72,22 +82,29 @@ const routesConfig = [
     ],
   },
   {
-    path: '/login',
-    element: <LoginPage />,
+    path: "/login",
+    element: (
+      <GuestGuard>
+        <LoginPage />
+      </GuestGuard>
+    ),
   },
   {
-    path: '/register',
-    element: <RegisterPage />,
+    path: "/register",
+    element: (
+      <GuestGuard>
+        <RegisterPage />
+      </GuestGuard>
+    ),
   },
   {
-    path: '/403',
+    path: "/403",
     element: <ForbiddenPage />,
   },
   {
-    path: '*',
+    path: "*",
     element: <PageNotFound />,
   },
 ]
 
 export default routesConfig
-
