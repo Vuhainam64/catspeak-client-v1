@@ -2,9 +2,13 @@ import { useState, useMemo } from "react"
 import { useNavigate } from "react-router-dom"
 import { useCreateVideoSessionMutation } from "@/store/api/videoSessionsApi"
 import { useGetRoomsQuery } from "@/store/api/roomsApi"
-import { slides } from "@/constants/constants"
+import { useLanguage } from "@/context/LanguageContext"
 
 export const useRoomsPageLogic = () => {
+  const { t } = useLanguage()
+  // Ensure we have slides from translation, fallback if structure missing to avoid crash
+  const slides = t?.rooms?.heroCarousel?.slides || []
+
   const [active, setActive] = useState(0)
   const [allowConnect, setAllowConnect] = useState(true)
   const [page, setPage] = useState(1)
@@ -79,7 +83,7 @@ export const useRoomsPageLogic = () => {
     }
   }
 
-  const current = useMemo(() => slides[active], [active])
+  const current = useMemo(() => slides[active] || {}, [active, slides])
 
   // Total pages now comes from API or calculated from totalCount if needed.
   // Using Math.max(1, ...) ensures at least 1 page.
@@ -116,6 +120,7 @@ export const useRoomsPageLogic = () => {
       current,
       totalPages,
       pagedRooms,
+      slides, // Export slides so UI components can use the same translated list
     },
     actions: {
       setActive,
