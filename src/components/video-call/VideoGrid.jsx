@@ -14,7 +14,7 @@ const VideoGrid = ({ localStream, peers, participants, currentUserId }) => {
 
   const gridClassName =
     count === 1
-      ? "grid-cols-1"
+      ? "justify-center items-center"
       : count === 2
       ? "grid-cols-2"
       : count <= 4
@@ -22,7 +22,7 @@ const VideoGrid = ({ localStream, peers, participants, currentUserId }) => {
       : "grid-cols-3"
 
   return (
-    <div className={`grid h-full w-full gap-4 ${gridClassName} p-4`}>
+    <div className={`grid h-screen w-full gap-4 ${gridClassName} p-4`}>
       {participants.map((participant) => {
         // Debugging ID mismatch - DEEP LOG
         console.log(`[VideoGrid] Checking ${participant.username}`, {

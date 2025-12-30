@@ -1,104 +1,133 @@
-import React, { useState } from "react"
+import React from "react"
 import { Link, useNavigate, useLocation } from "react-router-dom"
-import { FiEye, FiEyeOff } from "react-icons/fi"
 import { useLanguage } from "@context/LanguageContext.jsx"
-import LiquidGlassButton from "@components/LiquidGlassButton"
 import { useLoginMutation } from "@/store/api/authApi"
+import { Form, Input, Button, Checkbox } from "antd"
+import { UserOutlined, LockOutlined } from "@ant-design/icons"
+import AuthLayout from "@/layouts/AuthLayout"
 
 const LoginPage = () => {
   const navigate = useNavigate()
   const location = useLocation()
-  const [showPassword, setShowPassword] = useState(false)
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-
   const { t } = useLanguage()
   const authText = t.auth
 
   const [login, { isLoading }] = useLoginMutation()
+  const [form] = Form.useForm()
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
+  const onFinish = async (values) => {
     try {
-      await login({ username: email, password }).unwrap()
+      await login({
+        username: values.username,
+        password: values.password,
+      }).unwrap()
       const from = location.state?.from?.pathname || "/rooms"
-      navigate(from, { replace: true }) // Redirect to origin or app dashboard
+      navigate(from, { replace: true })
     } catch (err) {
       console.error("Login failed:", err)
-      // Ideally show error to user here
     }
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 py-12 sm:px-6 lg:px-8">
-      <div className="relative w-full max-w-md rounded-[32px] bg-white px-8 pb-10 pt-12 text-gray-800 shadow-[0_25px_60px_rgba(0,0,0,0.12)]">
-        <h2 className="text-center text-3xl font-black text-[#8f0d15]">
+    <AuthLayout
+      title="Welcome Back"
+      subtitle="Connect with cat lovers around the world. Join the conversation and share your passion."
+    >
+      <div className="text-center lg:text-left">
+        <h2 className="text-3xl font-black text-gray-900 tracking-tight">
           {authText.loginTitle}
         </h2>
-
-        <form className="mt-8 flex flex-col gap-5" onSubmit={handleSubmit}>
-          <label className="text-sm font-semibold text-gray-700">
-            {authText.emailLabel}
-            <input
-              type="text"
-              placeholder={authText.emailPlaceholder}
-              className="mt-2 w-full rounded-full border border-gray-200 px-4 py-3 text-sm text-gray-700 outline-none transition focus:border-[#f08d1d] focus:ring-1 focus:ring-[#f08d1d]"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-          </label>
-
-          <label className="text-sm font-semibold text-gray-700">
-            {authText.passwordLabel}
-            <div className="mt-2 flex items-center rounded-full border border-gray-200 px-4 py-3">
-              <input
-                type={showPassword ? "text" : "password"}
-                placeholder={authText.passwordPlaceholder}
-                className="w-full text-sm text-gray-700 outline-none"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-              <button
-                type="button"
-                className="ml-2 text-lg text-gray-500 transition hover:text-gray-700"
-                onClick={() => setShowPassword((prev) => !prev)}
-              >
-                {showPassword ? <FiEye /> : <FiEyeOff />}
-              </button>
-            </div>
-          </label>
-
-          <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-gray-600">
-            <label className="flex items-center gap-2">
-              <input type="checkbox" className="h-4 w-4 accent-[#f08d1d]" />
-              {authText.rememberMe}
-            </label>
-            <Link
-              to="/forgot-password"
-              className="font-semibold text-[#6e34c5]"
-            >
-              {authText.forgotLink}
-            </Link>
-          </div>
-
-          <LiquidGlassButton
-            type="submit"
-            variant="gradient"
-            className="mt-2 w-full rounded-[16px] py-3 text-lg font-black uppercase tracking-widest text-white disabled:opacity-50"
-            disabled={isLoading}
-          >
-            {isLoading ? "..." : authText.loginButton.toUpperCase()}
-          </LiquidGlassButton>
-        </form>
-
-        <p className="mt-7 text-center text-sm text-gray-700">
-          {authText.dontHaveAccount}{" "}
-          <Link to="/register" className="font-semibold text-[#6e34c5]">
-            {authText.registerLink}
-          </Link>
+        <p className="mt-2 text-sm text-gray-600">
+          Please enter your details to sign in
         </p>
       </div>
-    </div>
+
+      <Form
+        form={form}
+        name="login"
+        layout="vertical"
+        onFinish={onFinish}
+        size="large"
+        className="mt-8"
+      >
+        <Form.Item
+          name="username"
+          label={<span className="font-semibold text-gray-700">Username</span>}
+          rules={[
+            {
+              required: true,
+              message:
+                authText.usernameRequired || "Please input your username!",
+            },
+          ]}
+        >
+          <Input
+            prefix={<UserOutlined className="text-gray-400" />}
+            placeholder="Enter your username"
+            className="rounded-xl py-3"
+          />
+        </Form.Item>
+
+        <Form.Item
+          name="password"
+          label={
+            <span className="font-semibold text-gray-700">
+              {authText.passwordLabel}
+            </span>
+          }
+          rules={[
+            {
+              required: true,
+              message:
+                authText.passwordRequired || "Please input your password!",
+            },
+          ]}
+        >
+          <Input.Password
+            prefix={<LockOutlined className="text-gray-400" />}
+            placeholder={authText.passwordPlaceholder}
+            className="rounded-xl py-3"
+          />
+        </Form.Item>
+
+        <div className="flex items-center justify-between mb-6">
+          <Form.Item name="remember" valuePropName="checked" noStyle>
+            <Checkbox className="text-sm font-medium text-gray-600">
+              {authText.rememberMe}
+            </Checkbox>
+          </Form.Item>
+
+          <Link
+            to="/forgot-password"
+            className="text-sm font-semibold text-[#f08d1d] hover:text-[#d87c15] transition-colors"
+          >
+            {authText.forgotLink}
+          </Link>
+        </div>
+
+        <Form.Item>
+          <Button
+            type="primary"
+            htmlType="submit"
+            loading={isLoading}
+            block
+            className="h-12 text-base font-bold uppercase tracking-wider rounded-xl shadow-lg shadow-orange-500/30 hover:shadow-orange-500/50 border-none bg-gradient-to-r from-[#f08d1d] to-[#f4ab1b]"
+          >
+            {authText.loginButton}
+          </Button>
+        </Form.Item>
+      </Form>
+
+      <p className="text-center text-sm text-gray-600 font-medium">
+        {authText.dontHaveAccount}{" "}
+        <Link
+          to="/register"
+          className="font-bold text-[#f08d1d] hover:text-[#d87c15] transition-colors hover:underline"
+        >
+          {authText.registerLink}
+        </Link>
+      </p>
+    </AuthLayout>
   )
 }
 
