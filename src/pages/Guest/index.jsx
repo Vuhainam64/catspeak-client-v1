@@ -1,7 +1,8 @@
-export { default as HomePage } from './HomePage'
-export { default as PolicyPage } from './PolicyPage'
-export { default as RoomsPage } from './RoomsPage'
-export { default as VideoCallRoom } from './VideoCallRoom'
-export { default as LoginPage } from '../Auth/LoginPage'
-export { default as RegisterPage } from '../Auth/RegisterPage'
-export { default as RoomDetailPage } from './RoomDetailPage'
+export { default as HomePage } from "./HomePage"
+export { default as PolicyPage } from "./PolicyPage"
+export { default as RoomsPage } from "./RoomsPage"
+export { default as VideoCallRoom } from "./VideoCallRoom"
+export { default as LoginPage } from "../Auth/LoginPage"
+export { default as RegisterPage } from "../Auth/RegisterPage"
+export { default as RoomDetailPage } from "./RoomDetailPage"
+export { default as QueuePage } from "./QueuePage"

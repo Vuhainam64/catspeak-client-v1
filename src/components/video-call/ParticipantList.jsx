@@ -3,8 +3,13 @@ import useAudioLevel from "@/hooks/useAudioLevel"
 
 const ParticipantItem = ({ participant, isMe, isConnected, stream }) => {
   const audioLevel = useAudioLevel(stream)
-  const isMicOn = participant.isMicOn !== false // Default true if undefined
-  const isCameraOn = participant.isCameraOn !== false // Default true if undefined
+
+  // For local user (isMe), we can double check the stream tracks to reflect "Hardware Off" state immediately
+  const hasAudioTrack = !isMe || (stream && stream.getAudioTracks().length > 0)
+  const hasVideoTrack = !isMe || (stream && stream.getVideoTracks().length > 0)
+
+  const isMicOn = participant.isMicOn !== false && hasAudioTrack
+  const isCameraOn = participant.isCameraOn !== false && hasVideoTrack
 
   return (
     <div className="flex items-center gap-3 rounded-lg p-2 hover:bg-gray-100 transition-colors">

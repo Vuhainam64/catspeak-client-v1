@@ -41,25 +41,8 @@ export const useRoomsPageLogic = () => {
   const [isCreatingOneOnOne, setIsCreatingOneOnOne] = useState(false)
   const [isCreatingStudyGroup, setIsCreatingStudyGroup] = useState(false)
 
-  const handleCreateOneOnOneSession = async () => {
-    if (isCreatingOneOnOne) return
-    setIsCreatingOneOnOne(true)
-    try {
-      const response = await createVideoSession({
-        name: "Quick Chat",
-        roomType: 1,
-        invitedParticipants: [],
-      }).unwrap()
-
-      const sessionId = response.sessionId || response.id
-      if (sessionId) {
-        navigate(`/meet/${sessionId}`)
-      }
-    } catch (error) {
-      console.error("Failed to create 1:1 session:", error)
-    } finally {
-      setIsCreatingOneOnOne(false)
-    }
+  const handleCreateOneOnOneSession = () => {
+    navigate("/queue")
   }
 
   const handleCreateStudyGroupSession = async () => {
