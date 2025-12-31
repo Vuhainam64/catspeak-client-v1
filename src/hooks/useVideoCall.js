@@ -20,7 +20,8 @@ export const useVideoCall = (
   const [messages, setMessages] = useState([])
 
   // -- 1. Media Stream --
-  const { localStream, toggleTrack, isMediaReady } = useMediaStream()
+  const { localStream, toggleTrack, isMediaReady, startMedia, stopMedia } =
+    useMediaStream()
 
   // -- 2. Signaling (Connection) --
   // We use a ref for handlers because useWebRTC methods depend on connection,
@@ -40,6 +41,7 @@ export const useVideoCall = (
     createPeerConnection,
     initiateConnection,
     closePeerConnection,
+    addIceCandidate,
   } = useWebRTC(sessionId, localStream, connection)
 
   // -- Helpers --
@@ -78,10 +80,13 @@ export const useVideoCall = (
         }
       },
       ReceiveIceCandidate: async (sessId, senderId, candidatesJson) => {
-        const peer = peersRef.current[senderId]
-        if (peer?.peerConnection) {
-          await peer.peerConnection.addIceCandidate(
-            new RTCIceCandidate(JSON.parse(candidatesJson))
+        try {
+          const candidate = new RTCIceCandidate(JSON.parse(candidatesJson))
+          await addIceCandidate(senderId, candidate)
+        } catch (e) {
+          console.error(
+            `[useVideoCall] Error parsing/adding candidate for ${senderId}:`,
+            e
           )
         }
       },
@@ -89,7 +94,7 @@ export const useVideoCall = (
         setMessages((prev) => [
           ...prev,
           {
-            id: Date.now() + Math.random(),
+            id: crypto.randomUUID(),
             senderId,
             content,
             timestamp: timestamp || new Date().toISOString(),
@@ -107,7 +112,7 @@ export const useVideoCall = (
         setMessages((prev) => [
           ...prev,
           {
-            id: Date.now() + Math.random(),
+            id: crypto.randomUUID(),
             type: "system",
             content: `${participant.username} joined the chat`,
           },
@@ -137,7 +142,7 @@ export const useVideoCall = (
             setMessages((msgs) => [
               ...msgs,
               {
-                id: Date.now(),
+                id: crypto.randomUUID(),
                 type: "system",
                 content: `${user.username} left the chat`,
               },
@@ -259,6 +264,17 @@ export const useVideoCall = (
   // Derived state for UI
   const mergedParticipants = useMemo(() => {
     return participants.map((p) => {
+      // If this is the local user, use the local stream
+      if (String(p.accountId) === String(currentUserIdRef.current)) {
+        return {
+          ...p,
+          stream: localStream,
+          isActive: true,
+          isMicOn: p.isMicOn ?? true,
+          isCameraOn: p.isCameraOn ?? true,
+        }
+      }
+
       const peer = peers[p.accountId]
       return {
         ...p,
@@ -268,7 +284,7 @@ export const useVideoCall = (
         isCameraOn: p.isCameraOn ?? true,
       }
     })
-  }, [participants, peers])
+  }, [participants, peers, localStream])
 
   return {
     connection,
@@ -280,5 +296,7 @@ export const useVideoCall = (
     toggleAudio,
     toggleVideo,
     sendMessage,
+    startMedia,
+    stopMedia,
   }
 }

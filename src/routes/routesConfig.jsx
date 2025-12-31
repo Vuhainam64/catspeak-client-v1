@@ -8,6 +8,7 @@ import {
   LoginPage,
   RegisterPage,
   RoomDetailPage,
+  QueuePage,
 } from "@pages/Guest"
 import { UserDashboard, UserProfile, UserSetting } from "@pages/User"
 import { AdminPage } from "@pages/Admin"
@@ -80,6 +81,10 @@ const routesConfig = [
         element: <AdminPage />,
       },
     ],
+  },
+  {
+    path: "/queue",
+    element: <QueuePage />,
   },
   {
     path: "/login",

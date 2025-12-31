@@ -5,6 +5,8 @@ const ICE_SERVERS = {
   iceServers: [
     { urls: "stun:stun.l.google.com:19302" },
     { urls: "stun:global.stun.twilio.com:3478" },
+    { urls: "stun:stun1.l.google.com:19302" },
+    { urls: "stun:stun2.l.google.com:19302" },
   ],
 }
 
@@ -13,14 +15,10 @@ export const useWebRTC = (sessionId, localStream, connection) => {
   const peersRef = useRef({})
   const localStreamRef = useRef(localStream)
 
-  // Keep ref in sync
+  // Handle Stream Updates (Track Replacement)
   useEffect(() => {
-    localStreamRef.current = localStream
-  }, [localStream])
-
-  // Late Stream Attachment (if stream arrives after connection)
-  useEffect(() => {
-    if (!localStream) return
+    // If localStream is null or changed, update all peers
+    const stream = localStream // This can be null if all tracks stopped
 
     Object.keys(peersRef.current).forEach((userId) => {
       const peer = peersRef.current[userId]
@@ -28,11 +26,46 @@ export const useWebRTC = (sessionId, localStream, connection) => {
         const pc = peer.peerConnection
         const senders = pc.getSenders()
 
-        localStream.getTracks().forEach((track) => {
-          if (!senders.find((s) => s.track?.kind === track.kind)) {
-            pc.addTrack(track, localStream)
+        // 1. Helper to find sender for a kind
+        const findSender = (kind) =>
+          senders.find((s) => s.track && s.track.kind === kind)
+
+        // 2. Audio Handling
+        const audioTrack = stream?.getAudioTracks()[0]
+        const audioSender = findSender("audio")
+
+        if (audioTrack) {
+          if (audioSender) {
+            audioSender.replaceTrack(audioTrack).catch(console.error)
+          } else {
+            // Need to add transceiver if not exists, but usually we init with one.
+            // If we added via addTrack, we have a sender.
+            // If we started RecvOnly, we might have a transceiver with no track?
+            // "addTrack" is safest for simple renegotiation or initial add
+            pc.addTrack(audioTrack, stream)
           }
-        })
+        } else {
+          // Track stopped/removed
+          if (audioSender) {
+            audioSender.replaceTrack(null).catch(console.error)
+          }
+        }
+
+        // 3. Video Handling
+        const videoTrack = stream?.getVideoTracks()[0]
+        const videoSender = findSender("video")
+
+        if (videoTrack) {
+          if (videoSender) {
+            videoSender.replaceTrack(videoTrack).catch(console.error)
+          } else {
+            pc.addTrack(videoTrack, stream)
+          }
+        } else {
+          if (videoSender) {
+            videoSender.replaceTrack(null).catch(console.error)
+          }
+        }
       }
     })
   }, [localStream])
@@ -177,6 +210,25 @@ export const useWebRTC = (sessionId, localStream, connection) => {
           err
         )
       }
+
+      // Process Queued Candidates
+      const queue = peersRef.current[targetId]?.candidatesQueue
+      if (queue && queue.length > 0) {
+        console.log(
+          `[useWebRTC] Processing ${queue.length} queued candidates for ${targetId}`
+        )
+        for (const candidate of queue) {
+          try {
+            await pc.addIceCandidate(candidate)
+          } catch (e) {
+            console.error(
+              `[useWebRTC] Error adding queued candidate for ${targetId}:`,
+              e
+            )
+          }
+        }
+        peersRef.current[targetId].candidatesQueue = []
+      }
     }
 
     return pc
@@ -209,6 +261,32 @@ export const useWebRTC = (sessionId, localStream, connection) => {
         return next
       })
     }
+    setPeers({})
+  }
+
+  const addIceCandidate = async (targetId, candidate) => {
+    const peer = peersRef.current[targetId]
+    if (!peer) {
+      console.warn(
+        `[useWebRTC] Cannot add candidate: Peer ${targetId} not found`
+      )
+      return
+    }
+
+    const pc = peer.peerConnection
+    if (!pc.remoteDescription && pc.signalingState !== "stable") {
+      console.log(
+        `[useWebRTC] Queuing candidate for ${targetId} (no remoteDescription)`
+      )
+      if (!peer.candidatesQueue) peer.candidatesQueue = []
+      peer.candidatesQueue.push(candidate)
+    } else {
+      try {
+        await pc.addIceCandidate(candidate)
+      } catch (err) {
+        console.error(`[useWebRTC] addIceCandidate Error for ${targetId}:`, err)
+      }
+    }
   }
 
   const closeAllConnections = () => {
@@ -226,5 +304,6 @@ export const useWebRTC = (sessionId, localStream, connection) => {
     initiateConnection,
     closePeerConnection,
     closeAllConnections,
+    addIceCandidate,
   }
 }

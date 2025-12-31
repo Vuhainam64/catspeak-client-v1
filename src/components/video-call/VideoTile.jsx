@@ -14,6 +14,10 @@ const VideoTile = ({
   const isSpeaking = micOn && audioLevel > 5
   const videoRef = useRef(null)
 
+  // Check if stream actually has video tracks (Hardware check)
+  const hasVideoTrack = stream && stream.getVideoTracks().length > 0
+  const isVideoVisible = videoOn && hasVideoTrack
+
   useEffect(() => {
     // Assign stream if ref exists and stream exists (regardless of videoOn)
     if (videoRef.current && stream) {
@@ -40,7 +44,9 @@ const VideoTile = ({
           playsInline
           muted={isLocal} // Always mute local video
           ref={videoRef}
-          className={`h-full w-full object-cover ${videoOn ? "" : "hidden"}`}
+          className={`h-full w-full object-cover ${
+            isVideoVisible ? "" : "hidden"
+          }`}
           onLoadedMetadata={() => {
             console.log(`[VideoTile] onLoadedMetadata for ${name}`)
             if (videoRef.current) {
@@ -57,7 +63,7 @@ const VideoTile = ({
       )}
 
       {/* Show Avatar if no stream OR video is off */}
-      {(!stream || !videoOn) && (
+      {(!stream || !isVideoVisible) && (
         <div className="flex h-full w-full items-center justify-center bg-gray-50">
           {avatar ? (
             <img
@@ -112,7 +118,7 @@ const VideoTile = ({
             <FiMicOff className="h-4 w-4 text-cath-red-500" />
           </div>
         )}
-        {!videoOn && (
+        {!isVideoVisible && (
           <div className="rounded-full bg-cath-red-50 p-1.5 border border-cath-red-100 shadow-sm">
             <FiVideoOff className="h-4 w-4 text-cath-red-500" />
           </div>
