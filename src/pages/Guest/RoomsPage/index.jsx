@@ -70,17 +70,9 @@ const RoomsPage = () => {
         </div>
       </div>
 
-      {/* Lower section with sidebar & content for all tabs */}
-      <div className="mx-auto grid max-w-screen-xl gap-6 px-6 pb-12 md:grid-cols-[360px_1fr]">
-        {tab === "class" ? (
-          <ClassSidebar />
-        ) : (
-          <FiltersSidebar
-            roomFilters={roomFilters}
-            topicsFilters={topicsFilters}
-          />
-        )}
-
+      {/* Lower section with content & sidebar - SWAPPED */}
+      <div className="mx-auto grid max-w-screen-xl gap-6 px-6 pb-12 md:grid-cols-[1fr_360px]">
+        {/* Content area - NOW ON LEFT */}
         <div className="flex flex-col">
           <RoomTabs activeTab={tab} onChange={setTab} />
 
@@ -107,6 +99,16 @@ const RoomsPage = () => {
             </div>
           )}
         </div>
+
+        {/* Sidebar - NOW ON RIGHT */}
+        {tab === "class" ? (
+          <ClassSidebar />
+        ) : (
+          <FiltersSidebar
+            roomFilters={roomFilters}
+            topicsFilters={topicsFilters}
+          />
+        )}
       </div>
 
       {/* Live messages footer for all tabs */}

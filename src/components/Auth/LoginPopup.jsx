@@ -9,20 +9,31 @@ const LoginPopup = ({ onClose, onSwitchMode }) => {
   const [showPassword, setShowPassword] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  
+
   const { t } = useLanguage()
   const authText = t.auth
-  
+
   const [login, { isLoading }] = useLoginMutation()
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    console.log('Login form submitted', { email, password: '***' })
+
+    if (!email || !password) {
+      console.error('Email or password is empty')
+      alert('Vui lòng nhập email và mật khẩu')
+      return
+    }
+
     try {
-      await login({ username: email, password }).unwrap()
+      console.log('Calling login API...')
+      const result = await login({ username: email, password }).unwrap()
+      console.log('Login successful:', result)
       onClose()
+      window.location.reload() // Reload to update UI
     } catch (err) {
       console.error('Login failed:', err)
-      // Ideally show error to user here
+      alert(`Đăng nhập thất bại: ${err?.data?.message || err.message || 'Lỗi không xác định'}`)
     }
   }
 

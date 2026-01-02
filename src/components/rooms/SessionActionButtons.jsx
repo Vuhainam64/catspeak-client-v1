@@ -11,7 +11,7 @@ const SessionActionButtons = ({
 }) => {
   return (
     <div className="relative mt-6 pl-6">
-      <div className="absolute left-0 right-0 top-1/2 h-0.5 -translate-y-1/2 bg-[#990011]/20" />
+      <div className="absolute left-0 right-0 top-1/2 h-0.5 -translate-y-1/2 bg-[#990011]" />
       <div className="relative flex flex-wrap gap-3">
         {badges.map((b) => {
           const Icon = b.icon
@@ -31,13 +31,13 @@ const SessionActionButtons = ({
           return (
             <motion.div
               key={b.label}
-              className={`text-sm font-semibold flex items-center transform transition duration-200 ease-out ${
-                isActionable ? "cursor-pointer" : "cursor-default opacity-80"
-              }`}
+              className={`text-sm font-semibold flex items-center transform transition duration-200 ease-out ${isActionable ? "cursor-pointer" : "cursor-default opacity-80"
+                }`}
               onClick={isActionable ? handleClick : undefined}
               disabled={isActionable && isLoadingThis}
-              whileHover={isActionable ? { rotate: 720 } : {}} // spin only if actionable
-              transition={{ duration: 0.5, ease: "linear" }}
+              whileHover={isActionable ? { scale: 1.1 } : {}}
+              whileTap={isActionable ? { scale: 0.95 } : {}}
+              transition={{ duration: 0.2, ease: "easeInOut" }}
             >
               <BubblePillMessage asChild>
                 {isActionable && isLoadingThis ? (

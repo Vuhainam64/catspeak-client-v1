@@ -59,4 +59,3 @@ const FiltersSidebar = ({ roomFilters, topicsFilters }) => {
 };
 
 export default FiltersSidebar;
-

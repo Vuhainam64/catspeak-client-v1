@@ -1,13 +1,13 @@
 import React from "react"
-import { useNavigate } from "react-router-dom"
 import { useLanguage } from "../../../context/LanguageContext"
 
-const HeaderGuestControls = () => {
+const HeaderGuestControls = ({ onGetStarted }) => {
   const { t } = useLanguage()
-  const navigate = useNavigate()
 
   const handleLogin = () => {
-    navigate("/login")
+    if (onGetStarted) {
+      onGetStarted("login") // Open modal
+    }
   }
 
   return (
