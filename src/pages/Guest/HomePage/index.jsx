@@ -10,7 +10,7 @@ import { FiPlus, FiMinus } from "react-icons/fi";
 
 const HomePage = () => {
   const { t, language } = useLanguage();
-  
+
   // Select images based on current language
   const Hero1 = language === 'en' ? Hero1EN : Hero1VI;
   const BannerAI = language === 'en' ? BannerAIEN : BannerAIVI;
@@ -18,12 +18,25 @@ const HomePage = () => {
     isOpen: false,
     mode: "login",
   });
-  const [expandedQuestion, setExpandedQuestion] = useState(5); // Default to last question expanded (index 5)
+  const [expandedQuestions, setExpandedQuestions] = useState(new Set()); // Multiple questions can be expanded
   const [searchQuery, setSearchQuery] = useState("");
-  
-  // Handle question expansion
+
+  // Handle question expansion - Independent toggle for each question
   const toggleQuestion = (index) => {
-    setExpandedQuestion(expandedQuestion === index ? null : index);
+    setExpandedQuestions(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(index)) {
+        // Question is open -> Close it
+        newSet.delete(index);
+        console.log('Closing question:', index);
+      } else {
+        // Question is closed -> Open it
+        newSet.add(index);
+        console.log('Opening question:', index);
+      }
+      console.log('Currently expanded questions:', Array.from(newSet));
+      return newSet;
+    });
   };
 
   const openAuthModal = (mode = "login") =>
@@ -139,9 +152,8 @@ const HomePage = () => {
             {languages.map((lang, idx) => (
               <div
                 key={lang.code}
-                className={`relative flex items-center gap-4 rounded-[16px] bg-white p-5 shadow-[0_12px_30px_rgba(0,0,0,0.12)] transition hover:shadow-xl ${
-                  idx === 0 ? "md:ml-6" : ""
-                }`}
+                className={`relative flex items-center gap-4 rounded-[16px] bg-white p-5 shadow-[0_12px_30px_rgba(0,0,0,0.12)] transition hover:shadow-xl ${idx === 0 ? "md:ml-6" : ""
+                  }`}
               >
                 <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-full bg-white">
                   <img
@@ -262,7 +274,7 @@ const HomePage = () => {
               alt="FAQ Background"
               className="w-full h-auto object-cover"
             />
-            
+
             {/* Content Overlay */}
             <div className="absolute inset-0 p-8 md:p-12 lg:p-16 flex flex-col">
               {/* Header Section */}
@@ -280,7 +292,7 @@ const HomePage = () => {
                     {t.home.faq.title}
                   </h2>
                 </div>
-                
+
                 {/* Search Bar - Positioned to overlap */}
                 <div className="md:absolute md:top-8 md:right-8 lg:top-12 lg:right-12">
                   <div className="relative border-2 border-cath-red-800 rounded-xl px-5 py-3.5 shadow-search flex items-center gap-3 min-w-[240px] md:min-w-[280px] transition-all hover:border-cath-red-900 hover:shadow-lg">
@@ -309,56 +321,54 @@ const HomePage = () => {
               </div>
 
               {/* FAQ Questions Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5 flex-1 p-4">
-                {t.home.faq.questions
-                  .map((item, originalIndex) => {
-                    // Check if question matches search query
-                    const matchesSearch =
-                      item.question.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                      item.answer.toLowerCase().includes(searchQuery.toLowerCase());
-                    
-                    if (!matchesSearch) return null;
-                    
-                    const isExpanded = expandedQuestion === originalIndex;
-                    return (
-                      <div
-                        key={originalIndex}
-                        className={`rounded-xl border transition-all duration-300 ease-in-out ${
-                          isExpanded
-                            ? "bg-gradient-to-br from-orange-500/50 to-red-600/50 border-white/70 shadow-faq-card-expanded backdrop-blur-sm"
-                            : "bg-white/10 border-white/40 hover:bg-white/15 hover:border-white/50 shadow-faq-card backdrop-blur-sm"
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-y-1 gap-x-4 md:gap-x-6 flex-1 p-4 items-start">
+                {t.home.faq.questions.map((item, originalIndex) => {
+                  // Check if question matches search query
+                  const matchesSearch =
+                    item.question.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    item.answer.toLowerCase().includes(searchQuery.toLowerCase());
+
+                  if (!matchesSearch) return null;
+
+                  const isExpanded = expandedQuestions.has(originalIndex);
+
+                  return (
+                    <div
+                      key={originalIndex}
+                      className={`rounded-xl border transition-all duration-300 ease-in-out ${isExpanded
+                        ? "bg-gradient-to-br from-orange-500/50 to-red-600/50 border-white/70 shadow-faq-card-expanded backdrop-blur-sm"
+                        : "bg-white/10 border-white/40 hover:bg-white/15 hover:border-white/50 shadow-faq-card backdrop-blur-sm"
                         }`}
+                    >
+                      <button
+                        onClick={() => toggleQuestion(originalIndex)}
+                        className="w-full p-4 md:p-5 flex items-center justify-between text-left group"
                       >
-                        <button
-                          onClick={() => toggleQuestion(originalIndex)}
-                          className="w-full p-4 md:p-5 flex items-center justify-between text-left group"
-                        >
-                          <span
-                            className={`flex-1 text-base md:text-lg font-bold leading-snug pr-4 ${
-                              isExpanded ? "text-white" : "text-white group-hover:text-white/90"
+                        <span
+                          className={`flex-1 text-base md:text-lg font-bold leading-snug pr-4 ${isExpanded ? "text-white" : "text-white group-hover:text-white/90"
                             }`}
-                          >
-                            {item.question}
-                          </span>
-                          <div className="ml-2 flex-shrink-0 flex items-center justify-center w-7 h-7 rounded-full bg-white/20">
-                            {isExpanded ? (
-                              <FiMinus className="w-5 h-5 text-cath-red-800" aria-hidden />
-                            ) : (
-                              <FiPlus className="w-5 h-5 text-cath-yellow-400" aria-hidden />
-                            )}
-                          </div>
-                        </button>
-                        {isExpanded && (
-                          <div className="px-4 md:px-5 pb-4 md:pb-5 pt-0">
-                            <div className="h-px bg-white/20 mb-4"></div>
-                            <p className="text-white/95 text-sm md:text-base leading-relaxed">
-                              {item.answer}
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
+                        >
+                          {item.question}
+                        </span>
+                        <div className="ml-2 flex-shrink-0 flex items-center justify-center w-7 h-7 rounded-full bg-white/20">
+                          {isExpanded ? (
+                            <FiMinus className="w-5 h-5 text-cath-red-800" aria-hidden />
+                          ) : (
+                            <FiPlus className="w-5 h-5 text-cath-yellow-400" aria-hidden />
+                          )}
+                        </div>
+                      </button>
+                      {isExpanded && (
+                        <div className="px-4 md:px-5 pb-4 md:pb-5 pt-0">
+                          <div className="h-px bg-white/20 mb-4"></div>
+                          <p className="text-white/95 text-sm md:text-base leading-relaxed">
+                            {item.answer}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>

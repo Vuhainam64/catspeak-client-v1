@@ -10,9 +10,9 @@ const WelcomeSection = ({ allowConnect, setAllowConnect }) => {
 
   return (
     <div className="relative pl-6 h-full">
-      {/* Decorative connecting lines */}
-      <div className="absolute left-2 top-4 h-0.5 w-20 bg-[#990011]" />
-      <div className="absolute left-2 top-4 h-[220px] w-0.5 bg-[#990011]" />
+      {/* Decorative connecting lines with rounded corners */}
+      <div className="absolute left-2 top-4 h-0.5 w-20 bg-[#990011] rounded-r-full" />
+      <div className="absolute left-2 top-4 h-[220px] w-0.5 bg-[#990011] rounded-b-full" />
 
       <p className="text-3xl font-bold mb-1 ml-20">
         {welcome.greeting.replace("{{name}}", user?.username || "Friend")}
