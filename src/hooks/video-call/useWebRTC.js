@@ -3,10 +3,19 @@ import * as signalR from "@microsoft/signalr"
 
 const ICE_SERVERS = {
   iceServers: [
+    // Keep one STUN (optional but fine)
     { urls: "stun:stun.l.google.com:19302" },
-    { urls: "stun:global.stun.twilio.com:3478" },
-    { urls: "stun:stun1.l.google.com:19302" },
-    { urls: "stun:stun2.l.google.com:19302" },
+
+    // TURN (this is the fix)
+    {
+      urls: [
+        "turn:turn.yourdomain.com:3478?transport=udp",
+        "turn:turn.yourdomain.com:3478?transport=tcp",
+        "turns:turn.yourdomain.com:443?transport=tcp",
+      ],
+      username: "ephemeral-user",
+      credential: "ephemeral-password",
+    },
   ],
 }
 

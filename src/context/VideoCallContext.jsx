@@ -8,66 +8,49 @@ import {
 } from "@/store/api/videoSessionsApi"
 import { useVideoCall } from "@/hooks/useVideoCall"
 import toast from "react-hot-toast"
+import { MeetingProvider } from "@videosdk.live/react-sdk"
+import { authToken, meetingConfig } from "@/utils/videoSdkConfig"
 
 const VideoCallContext = createContext()
 
 export const useVideoCallContext = () => useContext(VideoCallContext)
 
-export const VideoCallProvider = ({ children }) => {
+// Internal component that has access to MeetingContext
+const VideoCallContent = ({
+  children,
+  session,
+  joinSession,
+  leaveSession,
+  sessionError,
+}) => {
   const { id } = useParams()
   const navigate = useNavigate()
   const location = useLocation()
 
+  // Local UI state
   const [micOn, setMicOn] = useState(true)
   const [cameraOn, setCameraOn] = useState(true)
   const [showChat, setShowChat] = useState(false)
   const [showParticipants, setShowParticipants] = useState(false)
-  const [hasJoined, setHasJoined] = useState(false)
+  const [hasJoined, setHasJoined] = useState(false) // Controls the "Join" screen of UI
 
-  const { data: userData, isLoading: isLoadingUser } = useGetProfileQuery()
-
-  // Extract current user ID correctly from API response structure
+  const { data: userData } = useGetProfileQuery()
   const user = userData?.data
   const currentUserId = user?.accountId
 
-  const token = localStorage.getItem("token")
-
+  // Use the refactored hook which now uses VideoSDK hooks internally
   const {
-    data: session,
-    isLoading: isLoadingSession,
-    error: sessionError,
-  } = useGetVideoSessionByIdQuery(id, {
-    skip: !id,
-  })
-
-  const [leaveSession, { isLoading: isLeaving }] =
-    useLeaveVideoSessionMutation()
-  const [joinSession] = useJoinVideoSessionMutation()
-
-  // Ensure user joins the session via API when accessing directly (only after manual join)
-  useEffect(() => {
-    if (id && token && hasJoined) {
-      joinSession(id)
-        .unwrap()
-        .catch((err) => {
-          console.error("Failed to join session via API:", err)
-        })
-    }
-  }, [id, token, joinSession, hasJoined])
-
-  // Use Custom Hook for WebRTC logic
-  const {
-    connection,
-    localStream,
-    peers,
-    participants: activeParticipants,
+    participants,
     messages,
-    isConnected,
     toggleAudio,
     toggleVideo,
     sendMessage,
-  } = useVideoCall(id, session?.participants, currentUserId, hasJoined)
+    leaveMeeting,
+    isConnected,
+    localParticipant,
+  } = useVideoCall(hasJoined)
 
+  // Sync local UI toggles with hook actions
   const handleToggleMic = () => {
     const newState = !micOn
     setMicOn(newState)
@@ -81,19 +64,22 @@ export const VideoCallProvider = ({ children }) => {
   }
 
   const handleSendMessage = (text) => {
-    sendMessage(text).catch((err) =>
-      console.error("Failed to send message", err)
-    )
+    sendMessage(text)
   }
 
   const handleLeaveSession = async () => {
-    try {
-      await leaveSession(id).unwrap()
-      navigate("/rooms")
-    } catch (error) {
-      console.error("Failed to leave session:", error)
-      navigate("/rooms")
+    // 1. Notify backend
+    if (id) {
+      try {
+        await leaveSession(id).unwrap()
+      } catch (error) {
+        console.error("Failed to leave session api:", error)
+      }
     }
+    // 2. Leave VideoSDK meeting
+    leaveMeeting()
+
+    navigate("/rooms")
   }
 
   const handleCopyLink = () => {
@@ -101,6 +87,21 @@ export const VideoCallProvider = ({ children }) => {
     navigator.clipboard.writeText(url)
     toast.success("Link copied to clipboard!")
   }
+
+  // Backend Join Sync
+  const token = localStorage.getItem("token")
+  useEffect(() => {
+    if (id && token && hasJoined) {
+      joinSession(id)
+        .unwrap()
+        .catch((err) => {
+          console.error("Failed to join session via API:", err)
+        })
+    }
+  }, [id, token, joinSession, hasJoined])
+
+  // Update local mic/cam state if changed externally or by SDK?
+  // For now, assume local state drives SDK.
 
   const value = {
     id,
@@ -117,28 +118,82 @@ export const VideoCallProvider = ({ children }) => {
     hasJoined,
     setHasJoined,
     user,
-    isLoadingUser,
     currentUserId,
     session,
-    isLoadingSession,
     sessionError,
-    isLeaving,
-    connection,
-    localStream,
-    peers,
-    activeParticipants,
+
+    // Normalized Data
+    activeParticipants: participants,
     messages,
     isConnected,
+    localStream: localParticipant?.streams, // May need processing if component expects simple stream
+
+    // Actions
     handleToggleMic,
     handleToggleCam,
     handleSendMessage,
     handleLeaveSession,
     handleCopyLink,
+
+    // Additional
+    connection: null, // Legacy support if needed
+    peers: {}, // Legacy support
   }
 
   return (
     <VideoCallContext.Provider value={value}>
       {children}
     </VideoCallContext.Provider>
+  )
+}
+
+export const VideoCallProvider = ({ children }) => {
+  const { id } = useParams()
+  const { data: userData } = useGetProfileQuery()
+  const user = userData?.data
+
+  const {
+    data: session,
+    isLoading: isLoadingSession,
+    error: sessionError,
+  } = useGetVideoSessionByIdQuery(id, { skip: !id })
+
+  const [joinSession] = useJoinVideoSessionMutation()
+  const [leaveSession] = useLeaveVideoSessionMutation()
+
+  // Loading state
+  if (isLoadingSession || !userData) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-neutral-950 text-white">
+        <p>Loading Session...</p>
+      </div>
+    )
+  }
+
+  // Render Provider
+  return (
+    <MeetingProvider
+      config={{
+        meetingId: id,
+        micEnabled: true,
+        webcamEnabled: true,
+        name: user?.username || "Guest",
+        metaData: {
+          accountId: user?.accountId,
+          username: user?.username,
+        },
+      }}
+      token={authToken}
+      joinWithoutUserInteraction={false}
+    >
+      <VideoCallContent
+        session={session}
+        joinSession={joinSession}
+        leaveSession={leaveSession}
+        sessionError={sessionError}
+      >
+        {children}
+      </VideoCallContent>
+    </MeetingProvider>
   )
 }
