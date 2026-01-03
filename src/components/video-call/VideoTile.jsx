@@ -48,17 +48,13 @@ const VideoTile = ({
             isVideoVisible ? "" : "hidden"
           }`}
           onLoadedMetadata={() => {
-            console.log(`[VideoTile] onLoadedMetadata for ${name}`)
             if (videoRef.current) {
-              videoRef.current
-                .play()
-                .catch((e) => console.error("[VideoTile] Play error:", e))
+              videoRef.current.play().catch((e) => {}) // Silenced play error
             }
           }}
-          onError={(e) =>
-            console.error(`[VideoTile] Video Error for ${name}:`, e)
-          }
-          onCanPlay={() => console.log(`[VideoTile] CanPlay for ${name}`)}
+          onError={(e) => {
+            // Silenced video error
+          }}
         />
       )}
 
@@ -114,13 +110,13 @@ const VideoTile = ({
       {/* Status Icons */}
       <div className="absolute bottom-3 right-3 flex gap-2">
         {!micOn && (
-          <div className="rounded-full bg-cath-red-50 p-1.5 border border-cath-red-100 shadow-sm">
-            <FiMicOff className="h-4 w-4 text-cath-red-500" />
+          <div className="rounded-full bg-cath-red-600 p-1.5 shadow-sm">
+            <FiMicOff className="h-4 w-4 text-white" />
           </div>
         )}
-        {!isVideoVisible && (
-          <div className="rounded-full bg-cath-red-50 p-1.5 border border-cath-red-100 shadow-sm">
-            <FiVideoOff className="h-4 w-4 text-cath-red-500" />
+        {!videoOn && (
+          <div className="rounded-full bg-cath-red-600 p-1.5 shadow-sm">
+            <FiVideoOff className="h-4 w-4 text-white" />
           </div>
         )}
       </div>

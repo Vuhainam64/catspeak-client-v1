@@ -48,6 +48,7 @@ const VideoCallContent = ({
     leaveMeeting,
     isConnected,
     localParticipant,
+    localMediaStream, // Added
   } = useVideoCall(hasJoined)
 
   // Sync local UI toggles with hook actions
@@ -91,17 +92,40 @@ const VideoCallContent = ({
   // Backend Join Sync
   const token = localStorage.getItem("token")
   useEffect(() => {
-    if (id && token && hasJoined) {
+    if (id && token && hasJoined && session && currentUserId) {
+      // Check if already in participants list to prevent double-join or unnecessary API calls
+      const isAlreadyParticipant = session.participants?.some(
+        (p) => String(p.accountId) === String(currentUserId)
+      )
+
+      if (isAlreadyParticipant) {
+        console.log(
+          "[VideoCallContext] User already in session participants, skipping API join."
+        )
+        return
+      }
+
       joinSession(id)
         .unwrap()
+        .then(() => {
+          toast.success("Joined session successfully")
+        })
         .catch((err) => {
           console.error("Failed to join session via API:", err)
+          if (err?.status === 400) {
+            const msg = err?.data || "Failed to join session"
+            // Only toast if it's a real error, capacity, etc.
+            if (String(msg).toLowerCase().includes("capacity")) {
+              toast.error(msg)
+              // Optional: Redirect could go here
+            } else {
+              // Suppress or show generic "Already joined?"
+              console.warn("Join API failed (likely already joined):", msg)
+            }
+          }
         })
     }
-  }, [id, token, joinSession, hasJoined])
-
-  // Update local mic/cam state if changed externally or by SDK?
-  // For now, assume local state drives SDK.
+  }, [id, token, hasJoined, session, currentUserId, joinSession])
 
   const value = {
     id,
@@ -126,7 +150,7 @@ const VideoCallContent = ({
     activeParticipants: participants,
     messages,
     isConnected,
-    localStream: localParticipant?.streams, // May need processing if component expects simple stream
+    localStream: localMediaStream, // Now a proper MediaStream
 
     // Actions
     handleToggleMic,

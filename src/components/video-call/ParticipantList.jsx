@@ -4,21 +4,32 @@ import useAudioLevel from "@/hooks/useAudioLevel"
 const ParticipantItem = ({ participant, isMe, isConnected, stream }) => {
   const audioLevel = useAudioLevel(stream)
 
-  // For local user (isMe), we can double check the stream tracks to reflect "Hardware Off" state immediately
-  const hasAudioTrack = !isMe || (stream && stream.getAudioTracks().length > 0)
-  const hasVideoTrack = !isMe || (stream && stream.getVideoTracks().length > 0)
-
-  const isMicOn = participant.isMicOn !== false && hasAudioTrack
-  const isCameraOn = participant.isCameraOn !== false && hasVideoTrack
+  // We rely on the participant.isMicOn / isCameraOn properties (which align with SDK state)
+  // rather than checking tracks, to ensures the UI icons match the Control Bar immediately.
+  const isMicOn = participant.isMicOn !== false
+  const isCameraOn = participant.isCameraOn !== false
 
   return (
     <div className="flex items-center gap-3 rounded-lg p-2 hover:bg-gray-100 transition-colors">
       <div className="relative">
-        <img
-          src={participant.avatarImageUrl || "https://via.placeholder.com/40"}
-          alt={participant.username}
-          className="h-10 w-10 rounded-full object-cover"
-        />
+        {participant.avatarImageUrl ? (
+          <img
+            src={participant.avatarImageUrl}
+            alt={participant.username}
+            className="h-10 w-10 rounded-full object-cover border border-gray-200"
+            onError={(e) => {
+              e.target.style.display = "none"
+              // The next sibling (placeholder) could be shown via CSS or state,
+              // but simplest is to handle it in state or just let the fallback exist.
+              // For valid URLs that fail loading, simpler to use a state, but
+              // for now let's focus on the prop check as requested.
+            }}
+          />
+        ) : (
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-indigo-100 text-indigo-600 font-semibold text-sm border border-indigo-200">
+            {(participant.username || "?").charAt(0).toUpperCase()}
+          </div>
+        )}
 
         {/* Audio Indicator Ring */}
         {isMicOn && audioLevel > 5 && (

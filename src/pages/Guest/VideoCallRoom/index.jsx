@@ -113,7 +113,7 @@ const VideoCallRoomContent = () => {
           </div>
         </div>
 
-        <div className="flex items-center gap-4">
+        {/* <div className="flex items-center gap-4">
           <button
             onClick={handleCopyLink}
             className="flex items-center gap-2 rounded-lg bg-cath-orange-500 px-3 py-1.5 text-sm font-semibold text-white hover:bg-cath-orange-600 transition shadow-sm"
@@ -122,7 +122,7 @@ const VideoCallRoomContent = () => {
             <FiChevronRight className="h-4 w-4" />
             {id} (Copy Link)
           </button>
-        </div>
+        </div> */}
       </div>
 
       {/* Main Content Area */}

@@ -14,10 +14,10 @@ export const useVideoCall = (shouldJoin = false) => {
     toggleWebcam,
   } = useMeeting({
     onMeetingJoined: () => {
-      console.log("[useVideoCall] Meeting Joined")
+      // console.log("[useVideoCall] Meeting Joined")
     },
     onMeetingLeft: () => {
-      console.log("[useVideoCall] Meeting Left")
+      // console.log("[useVideoCall] Meeting Left")
     },
   })
 
@@ -33,10 +33,6 @@ export const useVideoCall = (shouldJoin = false) => {
 
   // Convert PubSub messages to App's format
   useEffect(() => {
-    // Map VideoSDK messages to our format
-    // VideoSDK Message: { id, message, senderId, senderName, timestamp, topic }
-    // App Format: { id, senderId, content, timestamp, type? }
-
     const mapped = pubSubMessages.map((msg) => ({
       id: msg.id,
       senderId: msg.senderId, // This is VideoSDK ParticipantId
@@ -49,8 +45,12 @@ export const useVideoCall = (shouldJoin = false) => {
   }, [pubSubMessages, localParticipant])
 
   // -- Lifecycle --
+  const hasJoinedRef = useRef(false)
   useEffect(() => {
-    if (shouldJoin) {
+    if (shouldJoin && !hasJoinedRef.current) {
+      // Prevent spamming join
+      console.log("[useVideoCall] Attempting to join meeting from hooks...")
+      hasJoinedRef.current = true
       join()
     }
   }, [shouldJoin, join])
@@ -59,37 +59,52 @@ export const useVideoCall = (shouldJoin = false) => {
   const mappedParticipants = useMemo(() => {
     const participantsArr = []
 
-    // Add Local if exists (VideoSDK includes local in 'participants' Map usually?
-    // Docs: "participants" returns Map of *remote* participants. "localParticipant" is separate.)
-    // Wait, let's double check. `useMeeting().participants` is a Map of `participantId` -> `Participant` object.
-    // Usually it contains all joined participants EXCEPT local (in some versions) or ALL.
-    // Checking docs: "participants: Map<string, Participant>" - "List of all Joined Participants."
-    // But typically React SDK separates `localParticipant`.
-
     if (localParticipant) {
       const { displayName, streams, id } = localParticipant
-      // Extract MediaStream from streams map if needed
-      // streams: Map<string, Stream>
       const webcamStream = streams.get("webcam")?.track || null
       const micStream = streams.get("mic")?.track || null
+
+      // Create a combined MediaStream for the UI to consume
+      let combinedStream = null
+      if (webcamStream || micStream) {
+        const tracks = []
+        if (webcamStream) tracks.push(webcamStream)
+        if (micStream) tracks.push(micStream)
+        combinedStream = new MediaStream(tracks)
+      }
 
       participantsArr.push({
         id, // VideoSDK ID
         accountId: localParticipant.metaData?.accountId || "local",
         username: displayName,
-        isMicOn: !!micStream, // OR use localParticipant.micOn
-        isCameraOn: !!webcamStream,
-        stream: webcamStream ? new MediaStream([webcamStream]) : null, // UI likely expects a MediaStream object
+        isMicOn: localParticipant.micOn,
+        isCameraOn: localParticipant.webcamOn,
+        stream: combinedStream, // UI expects a MediaStream object
         isActive: true,
         isLocal: true,
       })
     }
 
     // Remote Participants
-    sdkParticipants.forEach((participant) => {
+    // Filter out duplicate local participant if it appears in remote list or duplicate entries
+    // Also ensuring no duplicates in general
+    const localId = localParticipant?.id
+
+    Array.from(sdkParticipants.values()).forEach((participant) => {
+      // Skip if it is the local user
+      if (participant.id === localId) return
+
       const { displayName, streams, id, metaData } = participant
       const webcamStream = streams.get("webcam")?.track
       const micStream = streams.get("mic")?.track // Check if exists
+
+      let combinedStream = null
+      if (webcamStream || micStream) {
+        const tracks = []
+        if (webcamStream) tracks.push(webcamStream)
+        if (micStream) tracks.push(micStream)
+        combinedStream = new MediaStream(tracks)
+      }
 
       participantsArr.push({
         id,
@@ -97,7 +112,7 @@ export const useVideoCall = (shouldJoin = false) => {
         username: displayName,
         isMicOn: participant.micOn, // property on Participant object
         isCameraOn: participant.webcamOn,
-        stream: webcamStream ? new MediaStream([webcamStream]) : null,
+        stream: combinedStream,
         isActive: true,
         isLocal: false,
       })
@@ -105,6 +120,22 @@ export const useVideoCall = (shouldJoin = false) => {
 
     return participantsArr
   }, [sdkParticipants, localParticipant])
+
+  // -- Local Media Stream Helper (Separately exposed for Previews) --
+  const localMediaStream = useMemo(() => {
+    if (localParticipant) {
+      const webcamStream = localParticipant.streams.get("webcam")?.track
+      const micStream = localParticipant.streams.get("mic")?.track
+
+      if (webcamStream || micStream) {
+        const tracks = []
+        if (webcamStream) tracks.push(webcamStream)
+        if (micStream) tracks.push(micStream)
+        return new MediaStream(tracks)
+      }
+    }
+    return null
+  }, [localParticipant])
 
   // -- Actions --
 
@@ -114,12 +145,6 @@ export const useVideoCall = (shouldJoin = false) => {
 
   const toggleAudio = (isEnabled) => {
     if (isEnabled) {
-      // If expecting "true" to enable, but toggleMic() just toggles?
-      // VideoSDK `toggleMic` just toggles current state.
-      // So if we want to force ENABLE, we should check state.
-      // But `toggleMic` logic: if muted, unmute.
-      // Assuming the UI state `micOn` matches reality, we can just call toggle.
-      // Better: Check `localParticipant.micOn`
       if (!localParticipant?.micOn) toggleMic()
     } else {
       if (localParticipant?.micOn) toggleMic()
@@ -143,5 +168,6 @@ export const useVideoCall = (shouldJoin = false) => {
     leaveMeeting: leave,
     isConnected: !!localParticipant, // Rough check
     localParticipant, // Exposed for raw access if needed
+    localMediaStream,
   }
 }
