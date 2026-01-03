@@ -36,4 +36,37 @@ export default {
       },
     ],
   },
+  filters: {
+    title: 'PHÒNG',
+    search: 'Tìm kiếm',
+    searchPlaceholder: 'Tìm kiếm',
+    topicsAndLevels: 'CHỦ ĐỀ | TRÌNH ĐỘ',
+    roomTypes: {
+      twoToFive: '2 : 5',
+      saved: 'Đã lưu',
+      forum: 'Diễn đàn',
+    },
+    topics: {
+      family: 'Gia đình',
+      sports: 'Thể thao',
+      movies: 'Phim',
+      travel: 'Du lịch',
+      school: 'Trường học',
+      stuff: 'Đồ đạc',
+      other: 'Khác',
+    },
+    levels: {
+      a1: 'A1',
+      b2: 'B2',
+    },
+  },
+  tabs: {
+    communicate: 'Giao tiếp',
+    teaching: 'Giảng dạy',
+    group: 'Nhóm',
+    class: 'Lớp học',
+  },
+  badge: {
+    live: 'ĐANG DIỄN RA',
+  },
 }

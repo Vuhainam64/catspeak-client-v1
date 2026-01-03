@@ -5,7 +5,7 @@ export default {
   contactUs: 'Contact Us',
   fullNamePlaceholder: 'Enter your full name',
   emailPlaceholder: 'Email',
-  contactMessage: 'Cat Speak will contact you as soon as possible^^',
+  contactMessage: 'will contact you as soon as possible^^',
   sendContact: 'Send contact information',
   languages: {
     vietnamese: 'Vietnamese',

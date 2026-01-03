@@ -3,7 +3,7 @@ import { Link, useNavigate, useLocation } from "react-router-dom"
 import { useLanguage } from "@context/LanguageContext.jsx"
 import { useLoginMutation } from "@/store/api/authApi"
 import { Form, Input, Button, Checkbox } from "antd"
-import { UserOutlined, LockOutlined } from "@ant-design/icons"
+import { MailOutlined, LockOutlined } from "@ant-design/icons"
 import AuthLayout from "@/layouts/AuthLayout"
 
 const LoginPage = () => {
@@ -18,7 +18,7 @@ const LoginPage = () => {
   const onFinish = async (values) => {
     try {
       await login({
-        username: values.username,
+        email: values.email,
         password: values.password,
       }).unwrap()
       const from = location.state?.from?.pathname || "/rooms"
@@ -51,19 +51,22 @@ const LoginPage = () => {
         className="mt-8"
       >
         <Form.Item
-          name="username"
-          label={<span className="font-semibold text-gray-700">Username</span>}
+          name="email"
+          label={<span className="font-semibold text-gray-700">Email</span>}
           rules={[
             {
               required: true,
-              message:
-                authText.usernameRequired || "Please input your username!",
+              message: "Please input your email!",
+            },
+            {
+              type: "email",
+              message: "Please enter a valid email!",
             },
           ]}
         >
           <Input
-            prefix={<UserOutlined className="text-gray-400" />}
-            placeholder="Enter your username"
+            prefix={<MailOutlined className="text-gray-400" />}
+            placeholder="Enter your email"
             className="rounded-xl py-3"
           />
         </Form.Item>

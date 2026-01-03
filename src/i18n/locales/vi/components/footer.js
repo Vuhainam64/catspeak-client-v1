@@ -5,7 +5,7 @@ export default {
   contactUs: 'Liên lạc với chúng tôi',
   fullNamePlaceholder: 'Nhập họ và tên',
   emailPlaceholder: 'Email',
-  contactMessage: 'Cat Speak sẽ liên lạc với bạn sớm nhất có thể bạn nhé^^',
+  contactMessage: 'sẽ liên lạc với bạn sớm nhất có thể bạn nhé^^',
   sendContact: 'Gửi thông tin liên hệ',
   languages: {
     vietnamese: 'Tiếng Việt',

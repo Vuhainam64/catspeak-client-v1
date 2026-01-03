@@ -1,7 +1,11 @@
 import React from "react";
 import { FiSearch } from "react-icons/fi";
+import { useLanguage } from "@/context/LanguageContext";
 
 const FiltersSidebar = ({ roomFilters, topicsFilters }) => {
+  const { t } = useLanguage();
+  const filtersText = t.rooms.filters;
+
   return (
     <aside className="rounded-3xl border border-gray-200 bg-white shadow-sm">
       <div className="flex items-center gap-3 border-b px-4 py-3">
@@ -9,11 +13,11 @@ const FiltersSidebar = ({ roomFilters, topicsFilters }) => {
           <FiSearch className="mr-2 h-4 w-4 text-gray-400" />
           <input
             className="w-full bg-transparent outline-none placeholder:text-gray-400"
-            placeholder="Tìm kiếm"
+            placeholder={filtersText.searchPlaceholder}
           />
         </div>
         <button className="flex h-9 w-9 items-center justify-center rounded-full bg-[#990011] text-white shadow">
-          <span className="sr-only">Search</span>
+          <span className="sr-only">{filtersText.search}</span>
           <FiSearch className="h-4 w-4" />
         </button>
       </div>
@@ -21,7 +25,7 @@ const FiltersSidebar = ({ roomFilters, topicsFilters }) => {
       <div className="max-h-[520px] overflow-y-auto px-4 pb-5 pt-3 scrollbar-thin scrollbar-thumb-[#990011] scrollbar-track-gray-200">
         <div className="space-y-5 text-sm">
           <div className="space-y-3">
-            <h3 className="text-base font-semibold text-gray-900">PHÒNG</h3>
+            <h3 className="text-base font-semibold text-gray-900">{filtersText.title}</h3>
             <div className="space-y-2">
               {roomFilters.map((item) => (
                 <label key={item.label} className="flex items-center gap-2 text-gray-800">
@@ -37,7 +41,7 @@ const FiltersSidebar = ({ roomFilters, topicsFilters }) => {
           </div>
 
           <div className="space-y-3 border-t border-gray-200 pt-4">
-            <h3 className="text-base font-semibold text-gray-900">CHỦ ĐỀ | TRÌNH ĐỘ</h3>
+            <h3 className="text-base font-semibold text-gray-900">{filtersText.topicsAndLevels}</h3>
             <div className="grid grid-cols-2 gap-x-4 gap-y-2">
               {topicsFilters.map((row, idx) =>
                 row.map((label) => (

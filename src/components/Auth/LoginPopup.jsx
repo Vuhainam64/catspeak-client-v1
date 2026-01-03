@@ -27,7 +27,7 @@ const LoginPopup = ({ onClose, onSwitchMode }) => {
 
     try {
       console.log('Calling login API...')
-      const result = await login({ username: email, password }).unwrap()
+      const result = await login({ email, password }).unwrap()
       console.log('Login successful:', result)
       onClose()
       window.location.reload() // Reload to update UI
