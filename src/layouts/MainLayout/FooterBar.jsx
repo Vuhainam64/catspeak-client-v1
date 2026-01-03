@@ -9,23 +9,7 @@ import { IconLogo } from "@/assets/icons/logo";
 import { Link } from "react-router-dom";
 import { useLanguage } from "@context/LanguageContext.jsx";
 
-const founders = [
-  {
-    name: "Nguyễn Ngọc Diễm Quỳnh",
-    role: "Founder / CEO",
-    avatar: "https://i.pravatar.cc/120?img=5",
-  },
-  {
-    name: "Nguyễn Phạm Đăng Quang",
-    role: "CTO",
-    avatar: "https://i.pravatar.cc/120?img=32",
-  },
-  {
-    name: "Nguyễn Ngọc Gia Hân",
-    role: "CSMO",
-    avatar: "https://i.pravatar.cc/120?img=47",
-  },
-];
+
 
 const FooterBar = () => {
   const { t } = useLanguage();
@@ -39,12 +23,7 @@ const FooterBar = () => {
 
   return (
     <footer className="relative overflow-hidden bg-white">
-      <style>
-        {`@keyframes founder-scroll {
-          0% { transform: translateY(0); }
-          100% { transform: translateY(-50%); }
-        }`}
-      </style>
+
       {/* Title */}
       <div className="w-full flex items-center justify-center text-xl uppercase text-gray-500 font-bold">
         {footerText.title}
@@ -80,8 +59,8 @@ const FooterBar = () => {
               className="col-span-1 w-full pb-4 pr-4"
             />
             <div className="flex flex-col justify-between w-full col-span-11 gap-4">
-              <div className="w-full grid grid-cols-11 gap-8 px-8 text-white pt-10">
-                <div className="col-span-3">
+              <div className="w-full grid grid-cols-9 gap-8 px-8 text-white pt-10">
+                <div className="col-span-4">
                   <div className="font-bold text-xl uppercase tracking-wide">
                     {footerText.ourCommunity}
                   </div>
@@ -94,38 +73,7 @@ const FooterBar = () => {
                     ))}
                   </ul>
                 </div>
-                <div className="col-span-4">
-                  <div className="font-bold text-xl uppercase text-center tracking-wide">
-                    {footerText.foundingTeam}
-                  </div>
-                  <div className="relative mt-3 overflow-hidden">
-                    <div className="flex flex-col gap-5 animate-[founder-scroll_15s_linear_infinite]">
-                      {[...founders, ...founders].map(
-                        ({ name, role, avatar }, idx) => (
-                          <div
-                            key={`${name}-${idx}`}
-                            className="flex items-center gap-4 rounded-full bg-white/10 px-4 py-2 shadow backdrop-blur-sm"
-                          >
-                            <div className="h-16 w-16 rounded-full border-2 border-white/70 p-1">
-                              <img
-                                src={avatar}
-                                alt={name}
-                                className="h-full w-full rounded-full object-cover"
-                              />
-                            </div>
-                            <div>
-                              <p className="text-base font-semibold">{name}</p>
-                              <p className="text-sm uppercase text-white/70">
-                                {role}
-                              </p>
-                            </div>
-                          </div>
-                        )
-                      )}
-                    </div>
-                  </div>
-                </div>
-                <div className="col-span-4">
+                <div className="col-span-5">
                   <div className="font-bold text-xl uppercase text-center tracking-wide mb-4">
                     {footerText.contactUs}
                   </div>
@@ -158,19 +106,25 @@ const FooterBar = () => {
                   </div>
                 </div>
               </div>
-              <div className="absolute w-full grid grid-cols-11 bottom-0">
-                <div className="col-span-3 flex justify-between px-12 py-4 text-yellow-300 ">
-                  <Link>{footerText.policies.privacy}</Link>
-                  <Link>{footerText.policies.terms}</Link>
-                </div>
-                <div className="col-span-3 pt-6">
-                  <div className="flex items-center justify-center text-gray-400 uppercase">
+              {/* Bottom policy links and copyright */}
+              <div className="absolute w-full bottom-0 left-0 right-0 px-12">
+                <div className="flex items-center justify-between py-4">
+                  {/* Left policies */}
+                  <div className="flex gap-8 text-yellow-300 text-sm">
+                    <Link className="hover:text-yellow-400 transition">{footerText.policies.privacy}</Link>
+                    <Link className="hover:text-yellow-400 transition">{footerText.policies.terms}</Link>
+                  </div>
+
+                  {/* Center copyright */}
+                  <div className="text-gray-400 uppercase text-xs text-center flex-shrink-0 mx-4">
                     {footerText.copyright}
                   </div>
-                </div>
-                <div className="col-span-3 flex justify-between px-12 py-4 text-yellow-300">
-                  <Link>{footerText.policies.payment}</Link>
-                  <Link>{footerText.policies.copyright}</Link>
+
+                  {/* Right policies */}
+                  <div className="flex gap-8 text-yellow-300 text-sm">
+                    <Link className="hover:text-yellow-400 transition">{footerText.policies.payment}</Link>
+                    <Link className="hover:text-yellow-400 transition">{footerText.policies.copyright}</Link>
+                  </div>
                 </div>
               </div>
             </div>

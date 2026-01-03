@@ -35,4 +35,37 @@ export default {
       },
     ],
   },
+  filters: {
+    title: 'ROOMS',
+    search: 'Search',
+    searchPlaceholder: 'Search',
+    topicsAndLevels: 'TOPICS | LEVELS',
+    roomTypes: {
+      twoToFive: '2 : 5',
+      saved: 'Saved',
+      forum: 'Forum',
+    },
+    topics: {
+      family: 'Family',
+      sports: 'Sports',
+      movies: 'Movies',
+      travel: 'Travel',
+      school: 'School',
+      stuff: 'Stuff',
+      other: 'Other',
+    },
+    levels: {
+      a1: 'A1',
+      b2: 'B2',
+    },
+  },
+  tabs: {
+    communicate: 'Communicate',
+    teaching: 'Teaching',
+    group: 'Group',
+    class: 'Class',
+  },
+  badge: {
+    live: 'LIVE NOW',
+  },
 }

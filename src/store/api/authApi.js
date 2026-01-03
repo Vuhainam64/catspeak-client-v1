@@ -16,7 +16,7 @@ export const authApi = baseApi.injectEndpoints({
           if (data.refreshToken)
             localStorage.setItem("refreshToken", data.refreshToken)
           if (data.user) localStorage.setItem("user", JSON.stringify(data.user))
-        } catch (err) {}
+        } catch (err) { }
       },
     }),
     register: builder.mutation({
@@ -33,7 +33,7 @@ export const authApi = baseApi.injectEndpoints({
           if (data.refreshToken)
             localStorage.setItem("refreshToken", data.refreshToken)
           if (data.user) localStorage.setItem("user", JSON.stringify(data.user))
-        } catch (err) {}
+        } catch (err) { }
       },
     }),
     registerAdmin: builder.mutation({
@@ -56,7 +56,7 @@ export const authApi = baseApi.injectEndpoints({
           if (data.token) localStorage.setItem("token", data.token)
           if (data.refreshToken)
             localStorage.setItem("refreshToken", data.refreshToken)
-        } catch (err) {}
+        } catch (err) { }
       },
     }),
     revoke: builder.mutation({
@@ -79,7 +79,7 @@ export const authApi = baseApi.injectEndpoints({
           localStorage.removeItem("token")
           localStorage.removeItem("refreshToken")
           localStorage.removeItem("user")
-        } catch (err) {}
+        } catch (err) { }
       },
     }),
     getProfile: builder.query({

@@ -9,10 +9,28 @@ import { useRoomsPageLogic } from "@/hooks/rooms/useRoomsPageLogic"
 import WelcomeSection from "@/components/rooms/WelcomeSection"
 import SessionActionButtons from "@/components/rooms/SessionActionButtons"
 import HeroCarousel from "@/components/rooms/HeroCarousel"
-import { roomFilters, topicsFilters } from "@/constants/constants"
 import LiveMessages from "@/components/rooms/LiveMessages"
+import { useLanguage } from "@/context/LanguageContext"
 
 const RoomsPage = () => {
+  const { t } = useLanguage()
+  const filtersText = t.rooms.filters
+
+  // Create translated filter data
+  const roomFilters = [
+    { label: filtersText.roomTypes.twoToFive, checked: true },
+    { label: filtersText.roomTypes.saved },
+    { label: filtersText.roomTypes.forum },
+  ]
+
+  const topicsFilters = [
+    [filtersText.topics.family, filtersText.topics.sports],
+    [filtersText.topics.movies, filtersText.topics.travel],
+    [filtersText.topics.school, filtersText.topics.stuff],
+    [filtersText.levels.a1, filtersText.levels.b2],
+    [filtersText.topics.other],
+  ]
+
   const { state, derived, actions } = useRoomsPageLogic()
   const {
     active,

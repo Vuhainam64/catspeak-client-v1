@@ -2,25 +2,27 @@ import React, { useState, useRef, useEffect, useMemo } from "react"
 import { useNavigate } from "react-router-dom"
 import { FiBell, FiUser, FiSettings, FiLogOut, FiMail } from "react-icons/fi"
 import { Spin } from "antd"
-import { useLogoutMutation, useGetProfileQuery } from "@/store/api/authApi"
+import { useGetProfileQuery } from "@/store/api/authApi"
 
 const HeaderUserControls = () => {
   const navigate = useNavigate()
-  const [logout] = useLogoutMutation()
   const { data: userData, isLoading } = useGetProfileQuery()
   const [isOpen, setIsOpen] = useState(false)
   const dropdownRef = useRef(null)
 
   const user = userData?.data ?? {}
 
-  const handleLogout = async () => {
-    try {
-      await logout().unwrap()
-      navigate("/login")
-    } catch (error) {
-      console.error("Logout failed:", error)
-    }
+  const handleLogout = () => {
+    console.log('=== LOGOUT CLICKED ===')
+    // Client-side logout only
+    localStorage.removeItem("token")
+    localStorage.removeItem("refreshToken")
+    localStorage.removeItem("user")
+    console.log('localStorage cleared')
     setIsOpen(false)
+    console.log('Navigating to /')
+    // Force full page reload
+    window.location.href = "/"
   }
 
   // Handle click outside to close dropdown
@@ -48,19 +50,17 @@ const HeaderUserControls = () => {
       <div className="relative">
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className={`flex items-center justify-center rounded-full hover:shadow-xl transition cursor-pointer ${
-            isOpen ? "ring-4 ring-[#f5c34a]/30 scale-105" : ""
-          }`}
+          className={`flex items-center justify-center rounded-full hover:shadow-xl transition cursor-pointer ${isOpen ? "ring-4 ring-[#f5c34a]/30 scale-105" : ""
+            }`}
         >
           {isLoading ? (
             <div className="flex items-center justify-center h-10 w-10 rounded-full bg-gray-200 animate-pulse" />
           ) : (
             <div
-              className={`flex items-center justify-center h-10 w-10 rounded-full overflow-hidden shadow-lg ${
-                user?.avatarImageUrl
-                  ? "bg-gray-100"
-                  : "bg-gradient-to-b from-[#f5c34a] to-[#c2131a]"
-              }`}
+              className={`flex items-center justify-center h-10 w-10 rounded-full overflow-hidden shadow-lg ${user?.avatarImageUrl
+                ? "bg-gray-100"
+                : "bg-gradient-to-b from-[#f5c34a] to-[#c2131a]"
+                }`}
             >
               {user?.avatarImageUrl ? (
                 <img

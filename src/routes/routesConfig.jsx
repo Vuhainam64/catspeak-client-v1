@@ -9,6 +9,7 @@ import {
   RegisterPage,
   RoomDetailPage,
   QueuePage,
+  ComingSoonPage,
 } from "@pages/Guest"
 import { UserDashboard, UserProfile, UserSetting } from "@pages/User"
 import { AdminPage } from "@pages/Admin"
@@ -85,6 +86,26 @@ const routesConfig = [
   {
     path: "/queue",
     element: <QueuePage />,
+  },
+  {
+    path: "/cart",
+    element: <MainLayout />,
+    children: [
+      {
+        index: true,
+        element: <ComingSoonPage />,
+      },
+    ],
+  },
+  {
+    path: "/connect",
+    element: <MainLayout />,
+    children: [
+      {
+        index: true,
+        element: <ComingSoonPage />,
+      },
+    ],
   },
   {
     path: "/login",
