@@ -19,6 +19,9 @@ export const useVideoCall = (shouldJoin = false) => {
     onMeetingLeft: () => {
       // console.log("[useVideoCall] Meeting Left")
     },
+    onError: (error) => {
+      console.error("[useVideoCall] VideoSDK Error:", error)
+    },
   })
 
   // -- Chat (PubSub) --
@@ -119,7 +122,12 @@ export const useVideoCall = (shouldJoin = false) => {
     })
 
     return participantsArr
-  }, [sdkParticipants, localParticipant])
+  }, [
+    sdkParticipants,
+    localParticipant,
+    localParticipant?.webcamOn,
+    localParticipant?.micOn,
+  ])
 
   // -- Local Media Stream Helper (Separately exposed for Previews) --
   const localMediaStream = useMemo(() => {
@@ -135,7 +143,7 @@ export const useVideoCall = (shouldJoin = false) => {
       }
     }
     return null
-  }, [localParticipant])
+  }, [localParticipant, localParticipant?.webcamOn, localParticipant?.micOn])
 
   // -- Actions --
 

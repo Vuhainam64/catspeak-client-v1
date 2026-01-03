@@ -48,6 +48,7 @@ const VideoGrid = ({ localStream, peers, participants, currentUserId }) => {
             className="relative h-full w-full"
           >
             <VideoTile
+              participantId={participant.id} // Pass SDK ID for internal hook usage
               stream={stream}
               name={participant.username}
               avatar={participant.avatarImageUrl} // Note: VideoSDK might not pass this in metaData, check implementation

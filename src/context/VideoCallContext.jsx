@@ -9,7 +9,7 @@ import {
 import { useVideoCall } from "@/hooks/useVideoCall"
 import toast from "react-hot-toast"
 import { MeetingProvider } from "@videosdk.live/react-sdk"
-import { authToken, meetingConfig } from "@/utils/videoSdkConfig"
+import { meetingConfig } from "@/utils/videoSdkConfig"
 
 const VideoCallContext = createContext()
 
@@ -33,6 +33,108 @@ const VideoCallContent = ({
   const [showChat, setShowChat] = useState(false)
   const [showParticipants, setShowParticipants] = useState(false)
   const [hasJoined, setHasJoined] = useState(false) // Controls the "Join" screen of UI
+  const [videoTrack, setVideoTrack] = useState(null)
+  const [audioTrack, setAudioTrack] = useState(null)
+
+  // -- Preview Stream Logic --
+
+  // Video Track Management
+  useEffect(() => {
+    if (hasJoined) {
+      setVideoTrack((prev) => {
+        if (prev) prev.stop()
+        return null
+      })
+      return
+    }
+
+    let active = true
+    let newTrack = null
+
+    const updateVideo = async () => {
+      if (cameraOn) {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({
+            video: true,
+          })
+          newTrack = stream.getVideoTracks()[0]
+          if (active) setVideoTrack(newTrack)
+          else newTrack.stop()
+        } catch (err) {
+          console.error("Error getting video:", err)
+        }
+      } else {
+        setVideoTrack(null)
+      }
+    }
+
+    updateVideo()
+
+    return () => {
+      active = false
+      if (newTrack) newTrack.stop()
+      setVideoTrack((prev) => {
+        if (prev) prev.stop()
+        return null
+      })
+    }
+  }, [hasJoined, cameraOn])
+
+  // Audio Track Management (Similar logic)
+  useEffect(() => {
+    if (hasJoined) {
+      setAudioTrack((prev) => {
+        if (prev) prev.stop()
+        return null
+      })
+      return
+    }
+
+    let active = true
+    let newTrack = null
+
+    const updateAudio = async () => {
+      if (micOn) {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({
+            audio: true,
+          })
+          newTrack = stream.getAudioTracks()[0]
+          if (active) setAudioTrack(newTrack)
+          else newTrack.stop()
+        } catch (err) {
+          console.error("Error getting audio:", err)
+        }
+      } else {
+        setAudioTrack(null)
+      }
+    }
+
+    updateAudio()
+
+    return () => {
+      active = false
+      if (newTrack) newTrack.stop()
+      setAudioTrack((prev) => {
+        if (prev) prev.stop()
+        return null
+      })
+    }
+  }, [hasJoined, micOn])
+
+  // Combine tracks into stream
+  const [previewStream, setPreviewStream] = useState(null)
+  useEffect(() => {
+    const tracks = []
+    if (videoTrack) tracks.push(videoTrack)
+    if (audioTrack) tracks.push(audioTrack)
+
+    if (tracks.length > 0) {
+      setPreviewStream(new MediaStream(tracks))
+    } else {
+      setPreviewStream(null)
+    }
+  }, [videoTrack, audioTrack])
 
   const { data: userData } = useGetProfileQuery()
   const user = userData?.data
@@ -150,7 +252,7 @@ const VideoCallContent = ({
     activeParticipants: participants,
     messages,
     isConnected,
-    localStream: localMediaStream, // Now a proper MediaStream
+    localStream: hasJoined ? localMediaStream : previewStream, // Now a proper MediaStream (preview or live)
 
     // Actions
     handleToggleMic,
@@ -198,7 +300,7 @@ export const VideoCallProvider = ({ children }) => {
   return (
     <MeetingProvider
       config={{
-        meetingId: id,
+        meetingId: session?.videoSdkMeetingId,
         micEnabled: true,
         webcamEnabled: true,
         name: user?.username || "Guest",
@@ -207,7 +309,7 @@ export const VideoCallProvider = ({ children }) => {
           username: user?.username,
         },
       }}
-      token={authToken}
+      token={session?.videoSdkToken}
       joinWithoutUserInteraction={false}
     >
       <VideoCallContent

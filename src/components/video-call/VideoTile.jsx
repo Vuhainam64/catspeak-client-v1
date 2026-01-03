@@ -1,15 +1,52 @@
 import { FiMicOff, FiVideoOff } from "react-icons/fi"
 import useAudioLevel from "@/hooks/useAudioLevel"
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useMemo } from "react"
+import { useParticipant } from "@videosdk.live/react-sdk"
 
 const VideoTile = ({
-  stream,
-  name,
-  avatar,
-  isLocal,
-  micOn = true,
-  videoOn = true,
+  participantId, // New prop
+  stream: propStream,
+  name: propName,
+  avatar: propAvatar,
+  isLocal: propIsLocal,
+  micOn: propMicOn = true,
+  videoOn: propVideoOn = true,
 }) => {
+  // -- VideoSDK Hook --
+  // If participantId is provided, we use the hook to get reactive state/streams
+  const {
+    displayName,
+    webcamStream,
+    micStream,
+    webcamOn,
+    micOn: sdkMicOn,
+    isLocal: sdkIsLocal,
+  } = useParticipant(participantId || null)
+
+  // -- Derived State --
+  // Prefer SDK values if available (participantId exists), otherwise fallback to props
+  const useSdk = !!participantId
+
+  const name = useSdk ? displayName : propName
+  const isLocal = useSdk ? sdkIsLocal : propIsLocal
+  const micOn = useSdk ? sdkMicOn : propMicOn
+  const videoOn = useSdk ? webcamOn : propVideoOn
+
+  // Combine streams if using SDK
+  const sdkStream = useMemo(() => {
+    if (!useSdk) return null
+    if (webcamStream || micStream) {
+      const tracks = []
+      if (webcamStream?.track) tracks.push(webcamStream.track)
+      if (micStream?.track) tracks.push(micStream.track)
+      return new MediaStream(tracks)
+    }
+    return null
+  }, [webcamStream, micStream, useSdk])
+
+  const stream = useSdk ? sdkStream : propStream
+
+  // -- Existing Logic --
   const audioLevel = useAudioLevel(stream)
   const isSpeaking = micOn && audioLevel > 5
   const videoRef = useRef(null)
@@ -23,11 +60,7 @@ const VideoTile = ({
     if (videoRef.current && stream) {
       videoRef.current.srcObject = stream
     }
-  }, [stream]) // Removed videoOn dependency to avoid re-assigning unnecessarily
-
-  useEffect(() => {
-    if (!stream) return
-  }, [stream, name])
+  }, [stream])
 
   return (
     <div
@@ -61,9 +94,9 @@ const VideoTile = ({
       {/* Show Avatar if no stream OR video is off */}
       {(!stream || !isVideoVisible) && (
         <div className="flex h-full w-full items-center justify-center bg-gray-50">
-          {avatar ? (
+          {propAvatar ? (
             <img
-              src={avatar}
+              src={propAvatar}
               alt={name}
               className={`h-24 w-24 rounded-full border-4 object-cover transition-colors duration-200 ${
                 isSpeaking ? "border-emerald-500" : "border-gray-200"
