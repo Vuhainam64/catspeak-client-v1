@@ -9,9 +9,11 @@ import HeaderGuestControls from "./Header/HeaderGuestControls"
 import LanguageSwitcher from "@/components/LanguageSwitcher"
 import { useLanguage } from "@/context/LanguageContext"
 
+import useAuth from "@/hooks/useAuth"
+
 const HeaderBar = ({ onGetStarted }) => {
   // Simplified check for token presence
-  const isLoggedIn = !!localStorage.getItem("token")
+  const { isAuthenticated: isLoggedIn } = useAuth()
   const [drawerOpen, setDrawerOpen] = React.useState(false)
 
   return (
@@ -49,7 +51,11 @@ const HeaderBar = ({ onGetStarted }) => {
               <LanguageSwitcher />
             </ConfigProvider>
           </div>
-          {isLoggedIn ? <HeaderUserControls /> : <HeaderGuestControls onGetStarted={onGetStarted} />}
+          {isLoggedIn ? (
+            <HeaderUserControls />
+          ) : (
+            <HeaderGuestControls onGetStarted={onGetStarted} />
+          )}
         </div>
       </div>
 

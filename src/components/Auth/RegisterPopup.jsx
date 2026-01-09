@@ -1,9 +1,10 @@
-import { useState } from 'react'
-import { FiEye, FiEyeOff, FiX } from 'react-icons/fi'
-import { useLanguage } from '@context/LanguageContext.jsx'
-import LiquidGlassButton from '@components/LiquidGlassButton'
-import { useRegisterMutation } from '@/store/api/authApi'
-import { useNavigate } from 'react-router-dom'
+import { useState } from "react"
+import { FiEye, FiEyeOff, FiX } from "react-icons/fi"
+import { useLanguage } from "@context/LanguageContext.jsx"
+import LiquidGlassButton from "@components/LiquidGlassButton"
+import { useRegisterMutation } from "@/store/api/authApi"
+import { useNavigate } from "react-router-dom"
+import AuthPopupAnim from "./AuthPopupAnim"
 
 const RegisterPopup = ({ onClose, onSwitchMode }) => {
   const [showPassword, setShowPassword] = useState(false)
@@ -14,20 +15,20 @@ const RegisterPopup = ({ onClose, onSwitchMode }) => {
 
   // Form state
   const [formData, setFormData] = useState({
-    username: '',
-    email: '',
-    password: '',
-    dateOfBirth: ''
+    username: "",
+    email: "",
+    password: "",
+    dateOfBirth: "",
   })
   const [errors, setErrors] = useState({})
   const [agreed, setAgreed] = useState(false)
 
   const handleChange = (e) => {
     const { name, value } = e.target
-    setFormData(prev => ({ ...prev, [name]: value }))
+    setFormData((prev) => ({ ...prev, [name]: value }))
     // Clear error when user types
     if (errors[name]) {
-      setErrors(prev => ({ ...prev, [name]: '' }))
+      setErrors((prev) => ({ ...prev, [name]: "" }))
     }
   }
 
@@ -35,27 +36,27 @@ const RegisterPopup = ({ onClose, onSwitchMode }) => {
     const newErrors = {}
 
     if (!formData.username.trim()) {
-      newErrors.username = 'Username is required'
+      newErrors.username = "Username is required"
     }
 
     if (!formData.email.trim()) {
-      newErrors.email = 'Email is required'
+      newErrors.email = "Email is required"
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Email is invalid'
+      newErrors.email = "Email is invalid"
     }
 
     if (!formData.password) {
-      newErrors.password = 'Password is required'
+      newErrors.password = "Password is required"
     } else if (formData.password.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters'
+      newErrors.password = "Password must be at least 6 characters"
     }
 
     if (!formData.dateOfBirth) {
-      newErrors.dateOfBirth = 'Date of birth is required'
+      newErrors.dateOfBirth = "Date of birth is required"
     }
 
     if (!agreed) {
-      newErrors.agreement = 'You must agree to the terms'
+      newErrors.agreement = "You must agree to the terms"
     }
 
     setErrors(newErrors)
@@ -72,15 +73,17 @@ const RegisterPopup = ({ onClose, onSwitchMode }) => {
     try {
       await register(formData).unwrap()
       onClose()
-      navigate('/')
+      navigate("/")
     } catch (err) {
-      console.error('Registration failed:', err)
-      setErrors({ submit: err?.data?.message || 'Registration failed. Please try again.' })
+      console.error("Registration failed:", err)
+      setErrors({
+        submit: err?.data?.message || "Registration failed. Please try again.",
+      })
     }
   }
 
   return (
-    <div className="relative rounded-[32px] bg-white px-8 pb-10 pt-12 text-gray-800 shadow-[0_25px_60px_rgba(0,0,0,0.12)]">
+    <AuthPopupAnim className="relative rounded-[32px] bg-white px-8 pb-10 pt-12 text-gray-800 shadow-[0_25px_60px_rgba(0,0,0,0.12)]">
       <button
         type="button"
         aria-label="Close"
@@ -90,7 +93,9 @@ const RegisterPopup = ({ onClose, onSwitchMode }) => {
         <FiX />
       </button>
 
-      <h2 className="text-center text-3xl font-black text-[#8f0d15]">{authText.registerTitle}</h2>
+      <h2 className="text-center text-3xl font-black text-[#8f0d15]">
+        {authText.registerTitle}
+      </h2>
 
       {errors.submit && (
         <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">
@@ -100,16 +105,20 @@ const RegisterPopup = ({ onClose, onSwitchMode }) => {
 
       <form onSubmit={handleSubmit} className="mt-8 grid grid-cols-1 gap-5">
         <label className="text-sm font-semibold text-gray-700">
-          {authText.usernameLabel || 'Username'}
+          {authText.usernameLabel || "Username"}
           <input
             type="text"
             name="username"
             value={formData.username}
             onChange={handleChange}
-            placeholder={authText.usernamePlaceholder || 'Enter your username'}
-            className={`mt-2 w-full rounded-full border ${errors.username ? 'border-red-500' : 'border-gray-200'} px-4 py-3 text-sm text-gray-700 outline-none transition focus:border-[#f08d1d] focus:ring-1 focus:ring-[#f08d1d]`}
+            placeholder={authText.usernamePlaceholder || "Enter your username"}
+            className={`mt-2 w-full rounded-full border ${
+              errors.username ? "border-red-500" : "border-gray-200"
+            } px-4 py-3 text-sm text-gray-700 outline-none transition focus:border-[#f08d1d] focus:ring-1 focus:ring-[#f08d1d]`}
           />
-          {errors.username && <span className="text-xs text-red-500 mt-1">{errors.username}</span>}
+          {errors.username && (
+            <span className="text-xs text-red-500 mt-1">{errors.username}</span>
+          )}
         </label>
 
         <label className="text-sm font-semibold text-gray-700">
@@ -120,16 +129,24 @@ const RegisterPopup = ({ onClose, onSwitchMode }) => {
             value={formData.email}
             onChange={handleChange}
             placeholder={authText.emailPlaceholder}
-            className={`mt-2 w-full rounded-full border ${errors.email ? 'border-red-500' : 'border-gray-200'} px-4 py-3 text-sm text-gray-700 outline-none transition focus:border-[#f08d1d] focus:ring-1 focus:ring-[#f08d1d]`}
+            className={`mt-2 w-full rounded-full border ${
+              errors.email ? "border-red-500" : "border-gray-200"
+            } px-4 py-3 text-sm text-gray-700 outline-none transition focus:border-[#f08d1d] focus:ring-1 focus:ring-[#f08d1d]`}
           />
-          {errors.email && <span className="text-xs text-red-500 mt-1">{errors.email}</span>}
+          {errors.email && (
+            <span className="text-xs text-red-500 mt-1">{errors.email}</span>
+          )}
         </label>
 
         <label className="text-sm font-semibold text-gray-700">
           {authText.passwordLabel}
-          <div className={`mt-2 flex items-center rounded-full border ${errors.password ? 'border-red-500' : 'border-gray-200'} px-4 py-3`}>
+          <div
+            className={`mt-2 flex items-center rounded-full border ${
+              errors.password ? "border-red-500" : "border-gray-200"
+            } px-4 py-3`}
+          >
             <input
-              type={showPassword ? 'text' : 'password'}
+              type={showPassword ? "text" : "password"}
               name="password"
               value={formData.password}
               onChange={handleChange}
@@ -144,19 +161,27 @@ const RegisterPopup = ({ onClose, onSwitchMode }) => {
               {showPassword ? <FiEye /> : <FiEyeOff />}
             </button>
           </div>
-          {errors.password && <span className="text-xs text-red-500 mt-1">{errors.password}</span>}
+          {errors.password && (
+            <span className="text-xs text-red-500 mt-1">{errors.password}</span>
+          )}
         </label>
 
         <label className="text-sm font-semibold text-gray-700">
-          {authText.dateOfBirthLabel || 'Date of Birth'}
+          {authText.dateOfBirthLabel || "Date of Birth"}
           <input
             type="date"
             name="dateOfBirth"
             value={formData.dateOfBirth}
             onChange={handleChange}
-            className={`mt-2 w-full rounded-full border ${errors.dateOfBirth ? 'border-red-500' : 'border-gray-200'} px-4 py-3 text-sm text-gray-700 outline-none transition focus:border-[#f08d1d] focus:ring-1 focus:ring-[#f08d1d]`}
+            className={`mt-2 w-full rounded-full border ${
+              errors.dateOfBirth ? "border-red-500" : "border-gray-200"
+            } px-4 py-3 text-sm text-gray-700 outline-none transition focus:border-[#f08d1d] focus:ring-1 focus:ring-[#f08d1d]`}
           />
-          {errors.dateOfBirth && <span className="text-xs text-red-500 mt-1">{errors.dateOfBirth}</span>}
+          {errors.dateOfBirth && (
+            <span className="text-xs text-red-500 mt-1">
+              {errors.dateOfBirth}
+            </span>
+          )}
         </label>
 
         <label className="flex items-start gap-3 text-sm text-gray-600">
@@ -167,18 +192,20 @@ const RegisterPopup = ({ onClose, onSwitchMode }) => {
             onChange={(e) => setAgreed(e.target.checked)}
           />
           <span>
-            {authText.agreePrefix}{' '}
+            {authText.agreePrefix}{" "}
             <button type="button" className="font-semibold text-[#6e34c5]">
               {authText.serviceTerms}
-            </button>{' '}
-            {authText.and}{' '}
+            </button>{" "}
+            {authText.and}{" "}
             <button type="button" className="font-semibold text-[#6e34c5]">
               {authText.privacyPolicy}
-            </button>{' '}
+            </button>{" "}
             {authText.companySuffix}
           </span>
         </label>
-        {errors.agreement && <span className="text-xs text-red-500 -mt-3">{errors.agreement}</span>}
+        {errors.agreement && (
+          <span className="text-xs text-red-500 -mt-3">{errors.agreement}</span>
+        )}
 
         <LiquidGlassButton
           type="submit"
@@ -186,7 +213,9 @@ const RegisterPopup = ({ onClose, onSwitchMode }) => {
           className="mt-2 w-full rounded-[16px] py-3 text-lg font-black uppercase tracking-widest text-white"
           disabled={isLoading}
         >
-          {isLoading ? 'ĐANG ĐĂNG KÝ...' : authText.registerButton.toUpperCase()}
+          {isLoading
+            ? "ĐANG ĐĂNG KÝ..."
+            : authText.registerButton.toUpperCase()}
         </LiquidGlassButton>
       </form>
 
@@ -197,18 +226,17 @@ const RegisterPopup = ({ onClose, onSwitchMode }) => {
           </span>
           <span className="absolute left-0 top-1/2 h-px w-full -translate-y-1/2 bg-gray-200" />
         </div>
-        {authText.haveAccount}{' '}
+        {authText.haveAccount}{" "}
         <button
           type="button"
           className="font-semibold text-[#6e34c5]"
-          onClick={() => onSwitchMode('login')}
+          onClick={() => onSwitchMode("login")}
         >
           {authText.loginLink}
         </button>
       </div>
-    </div>
+    </AuthPopupAnim>
   )
 }
 
 export default RegisterPopup
-

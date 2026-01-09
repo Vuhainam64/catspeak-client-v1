@@ -1,7 +1,8 @@
 import React from "react"
-import { Pagination } from "antd"
+import { Pagination, Tabs, ConfigProvider } from "antd"
 import { motion } from "framer-motion"
-import RoomTabs from "@/components/rooms/RoomTabs"
+import { FiMessageCircle, FiMonitor, FiUsers, FiLayers } from "react-icons/fi"
+// RoomTabs import removed
 import FiltersSidebar from "@/components/rooms/FiltersSidebar"
 import ClassSidebar from "@/components/rooms/ClassSidebar"
 import RoomsGrid from "@/components/rooms/RoomsGrid"
@@ -11,26 +12,10 @@ import SessionActionButtons from "@/components/rooms/SessionActionButtons"
 import HeroCarousel from "@/components/rooms/HeroCarousel"
 import LiveMessages from "@/components/rooms/LiveMessages"
 import { useLanguage } from "@/context/LanguageContext"
+import ClassTab from "@/components/rooms/ClassTab"
 
 const RoomsPage = () => {
   const { t } = useLanguage()
-  const filtersText = t.rooms.filters
-
-  // Create translated filter data
-  const roomFilters = [
-    { label: filtersText.roomTypes.twoToFive, checked: true },
-    { label: filtersText.roomTypes.saved },
-    { label: filtersText.roomTypes.forum },
-  ]
-
-  const topicsFilters = [
-    [filtersText.topics.family, filtersText.topics.sports],
-    [filtersText.topics.movies, filtersText.topics.travel],
-    [filtersText.topics.school, filtersText.topics.stuff],
-    [filtersText.levels.a1, filtersText.levels.b2],
-    [filtersText.topics.other],
-  ]
-
   const { state, derived, actions } = useRoomsPageLogic()
   const {
     active,
@@ -77,56 +62,111 @@ const RoomsPage = () => {
 
         {/* Right column */}
         <div className="w-full md:w-1/2">
-          <HeroCarousel
-            active={active}
-            setActive={setActive}
-            current={current}
-            next={next}
-            prev={prev}
-            slides={slides}
-          />
+          <HeroCarousel slides={slides} />
         </div>
       </div>
 
-      {/* Lower section with content & sidebar - SWAPPED */}
-      <div className="mx-auto grid max-w-screen-xl gap-6 px-6 pb-12 md:grid-cols-[1fr_360px]">
-        {/* Content area - NOW ON LEFT */}
+      {/* Lower section with content & sidebar - SWAPPED to Sidebar Left */}
+      <div className="mx-auto grid max-w-screen-xl gap-6 px-6 pb-12 md:grid-cols-[360px_1fr]">
+        {/* Sidebar - NOW ON LEFT */}
+        {tab === "class" ? <ClassSidebar /> : <FiltersSidebar />}
+
+        {/* Content area - NOW ON RIGHT */}
+        {/* Content area - NOW ON RIGHT */}
         <div className="flex flex-col">
-          <RoomTabs activeTab={tab} onChange={setTab} />
+          <ConfigProvider
+            theme={{
+              token: {
+                colorPrimary: "#990011",
+              },
+            }}
+          >
+            <Tabs
+              activeKey={tab}
+              onChange={setTab}
+              items={[
+                {
+                  key: "communicate",
+                  label: (
+                    <span className="flex items-center gap-2">
+                      <FiMessageCircle className="h-4 w-4" />
+                      {t.rooms.tabs.communicate}
+                    </span>
+                  ),
+                  children: (
+                    <>
+                      {pagedRooms.length > 0 ? (
+                        <>
+                          <RoomsGrid rooms={pagedRooms} />
 
-          {tab === "communicate" ? (
-            <>
-              <RoomsGrid rooms={pagedRooms} />
-
-              {/* Pagination (Moved from RoomsGrid) */}
-              <div className="mt-6 flex justify-center">
-                <Pagination
-                  current={page} // page is 1-indexed
-                  pageSize={1} // Treat each "item" as a page since we only have totalPages
-                  total={totalPages}
-                  onChange={setPage}
-                  showSizeChanger={false}
-                />
-              </div>
-            </>
-          ) : tab === "class" ? (
-            <ClassTab />
-          ) : (
-            <div className="rounded-3xl border border-dashed border-gray-200 bg-white p-10 text-center text-gray-500">
-              Nội dung cho tab "{tab}" sẽ được cập nhật.
-            </div>
-          )}
+                          {/* Pagination (Moved from RoomsGrid) */}
+                          <div className="mt-6 flex justify-center">
+                            <Pagination
+                              current={page} // page is 1-indexed
+                              pageSize={1} // Treat each "item" as a page since we only have totalPages
+                              total={totalPages}
+                              onChange={setPage}
+                              showSizeChanger={false}
+                            />
+                          </div>
+                        </>
+                      ) : (
+                        <div className="flex flex-col items-center justify-center rounded-3xl border border-dashed border-gray-200 bg-white py-20 text-center">
+                          <div className="mb-4 text-6xl">🏜️</div>
+                          <h3 className="mb-2 text-xl font-bold text-gray-800">
+                            No rooms found
+                          </h3>
+                          <p className="text-gray-500">
+                            There are no active rooms right now. Why not create
+                            one?
+                          </p>
+                        </div>
+                      )}
+                    </>
+                  ),
+                },
+                {
+                  key: "teaching",
+                  label: (
+                    <span className="flex items-center gap-2">
+                      <FiMonitor className="h-4 w-4" />
+                      {t.rooms.tabs.teaching}
+                    </span>
+                  ),
+                  children: (
+                    <div className="rounded-3xl border border-dashed border-gray-200 bg-white p-10 text-center text-gray-500">
+                      Nội dung cho tab "teaching" sẽ được cập nhật.
+                    </div>
+                  ),
+                },
+                {
+                  key: "group",
+                  label: (
+                    <span className="flex items-center gap-2">
+                      <FiUsers className="h-4 w-4" />
+                      {t.rooms.tabs.group}
+                    </span>
+                  ),
+                  children: (
+                    <div className="rounded-3xl border border-dashed border-gray-200 bg-white p-10 text-center text-gray-500">
+                      Nội dung cho tab "group" sẽ được cập nhật.
+                    </div>
+                  ),
+                },
+                {
+                  key: "class",
+                  label: (
+                    <span className="flex items-center gap-2">
+                      <FiLayers className="h-4 w-4" />
+                      {t.rooms.tabs.class}
+                    </span>
+                  ),
+                  children: <ClassTab />,
+                },
+              ]}
+            />
+          </ConfigProvider>
         </div>
-
-        {/* Sidebar - NOW ON RIGHT */}
-        {tab === "class" ? (
-          <ClassSidebar />
-        ) : (
-          <FiltersSidebar
-            roomFilters={roomFilters}
-            topicsFilters={topicsFilters}
-          />
-        )}
       </div>
 
       {/* Live messages footer for all tabs */}

@@ -1,7 +1,10 @@
 import React, { useState, useRef, useEffect } from "react"
 import * as signalR from "@microsoft/signalr"
 
+import useAuth from "@/hooks/useAuth"
+
 export const useQueueSignaling = (handlers = {}) => {
+  const { token } = useAuth()
   const [isConnected, setIsConnected] = useState(false)
   const [connectionId, setConnectionId] = useState(null)
   const connectionRef = useRef(null)
@@ -13,7 +16,6 @@ export const useQueueSignaling = (handlers = {}) => {
   }, [handlers])
 
   useEffect(() => {
-    const token = localStorage.getItem("token")
     if (!token) {
       console.warn("[QueueSignalR] No token found, cannot connect.")
       return
@@ -108,7 +110,7 @@ export const useQueueSignaling = (handlers = {}) => {
       setConnectionId(null)
       connectionRef.current = null
     }
-  }, []) // run once on mount
+  }, [token]) // run when token changes
 
   // Wrappers for specific hub methods - Stabilize with useCallback
   const invoke = React.useCallback(async (methodName, ...args) => {

@@ -22,8 +22,8 @@ export const slides = [
 ]
 
 export const badges = [
-  { label: "1:1", desc: "Kèm riêng", icon: FiUser },
-  { label: "2:5", desc: "Nhóm nhỏ", icon: FiUsers },
+  { label: "Queue 1:1", desc: "Kèm riêng", icon: FiUser },
+  { label: "Create 2:5 room", desc: "Nhóm nhỏ", icon: FiUsers },
   { label: "AI", desc: "Giáo viên AI", icon: FiCpu },
 ]
 

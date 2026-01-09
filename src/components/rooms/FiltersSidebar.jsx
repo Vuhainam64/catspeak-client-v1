@@ -1,65 +1,69 @@
-import React from "react";
-import { FiSearch } from "react-icons/fi";
-import { useLanguage } from "@/context/LanguageContext";
+import React from "react"
+import { FiSearch } from "react-icons/fi"
+import { useSearchParams } from "react-router-dom"
+import { useLanguage } from "@/context/LanguageContext"
+import { Input, Checkbox, ConfigProvider, theme } from "antd"
 
-const FiltersSidebar = ({ roomFilters, topicsFilters }) => {
-  const { t } = useLanguage();
-  const filtersText = t.rooms.filters;
+const LEVELS = {
+  english: ["A1", "A2", "B1", "B2", "C1", "C2"],
+  vietnamese: ["A1", "A2", "B1", "B2", "C1", "C2"],
+  chinese: ["HSK 1", "HSK 2", "HSK 3", "HSK 4", "HSK 5", "HSK 6"],
+}
+
+const FiltersSidebar = () => {
+  const { t } = useLanguage()
+  const filtersText = t.rooms.filters
+  const [searchParams] = useSearchParams()
+  const currentLanguage = searchParams.get("language") || "english"
+  const currentLevels = LEVELS[currentLanguage] || LEVELS.english
+
+  // Use Ant Design theme token for consistent colors
+  const { token } = theme.useToken()
 
   return (
-    <aside className="rounded-3xl border border-gray-200 bg-white shadow-sm">
-      <div className="flex items-center gap-3 border-b px-4 py-3">
-        <div className="flex h-9 flex-1 items-center rounded-full border border-gray-200 px-3 text-sm text-gray-600">
-          <FiSearch className="mr-2 h-4 w-4 text-gray-400" />
-          <input
-            className="w-full bg-transparent outline-none placeholder:text-gray-400"
+    <ConfigProvider
+      theme={{
+        token: {
+          colorPrimary: "#990011", // Brand red color
+        },
+      }}
+    >
+      <aside className="rounded-3xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+        {/* Search Header */}
+        <div className="border-b px-4 py-4">
+          <Input
+            prefix={<FiSearch className="text-gray-400 mr-2" />}
             placeholder={filtersText.searchPlaceholder}
+            variant="borderless"
+            className="rounded-full bg-gray-50 px-4 py-2 hover:bg-gray-100 focus:bg-white border border-transparent focus:border-gray-200 transition-all"
+            styles={{
+              input: { fontWeight: 500 },
+            }}
           />
         </div>
-        <button className="flex h-9 w-9 items-center justify-center rounded-full bg-[#990011] text-white shadow">
-          <span className="sr-only">{filtersText.search}</span>
-          <FiSearch className="h-4 w-4" />
-        </button>
-      </div>
 
-      <div className="max-h-[520px] overflow-y-auto px-4 pb-5 pt-3 scrollbar-thin scrollbar-thumb-[#990011] scrollbar-track-gray-200">
-        <div className="space-y-5 text-sm">
-          <div className="space-y-3">
-            <h3 className="text-base font-semibold text-gray-900">{filtersText.title}</h3>
-            <div className="space-y-2">
-              {roomFilters.map((item) => (
-                <label key={item.label} className="flex items-center gap-2 text-gray-800">
-                  <input
-                    type="checkbox"
-                    defaultChecked={item.checked}
-                    className="h-4 w-4 rounded border-gray-300 text-[#990011] focus:ring-[#990011]"
-                  />
-                  {item.label}
-                </label>
+        {/* Filters Content */}
+        <div className="max-h-[520px] overflow-y-auto px-6 py-6 scrollbar-thin scrollbar-thumb-[#990011] scrollbar-track-gray-200">
+          <div className="space-y-4">
+            <h3 className="text-base font-bold text-gray-800 uppercase tracking-wide">
+              {filtersText.topicsAndLevels}
+            </h3>
+
+            <div className="grid grid-cols-2 gap-3">
+              {currentLevels.map((level) => (
+                <Checkbox
+                  key={level}
+                  className="text-gray-600 font-medium hover:text-[#990011] transition-colors"
+                >
+                  {level}
+                </Checkbox>
               ))}
             </div>
           </div>
-
-          <div className="space-y-3 border-t border-gray-200 pt-4">
-            <h3 className="text-base font-semibold text-gray-900">{filtersText.topicsAndLevels}</h3>
-            <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-              {topicsFilters.map((row, idx) =>
-                row.map((label) => (
-                  <label key={`${idx}-${label}`} className="flex items-center gap-2 text-gray-800">
-                    <input
-                      type="checkbox"
-                      className="h-4 w-4 rounded border-gray-300 text-[#990011] focus:ring-[#990011]"
-                    />
-                    {label}
-                  </label>
-                ))
-              )}
-            </div>
-          </div>
         </div>
-      </div>
-    </aside>
-  );
-};
+      </aside>
+    </ConfigProvider>
+  )
+}
 
-export default FiltersSidebar;
+export default FiltersSidebar

@@ -15,7 +15,7 @@ const RoomTabs = ({ activeTab, onChange }) => {
   ]
 
   return (
-    <div className="mb-6 flex w-full flex-wrap items-center justify-start gap-3 border-b border-gray-100 pb-2">
+    <div className="mb-6 inline-flex flex-wrap items-center justify-start gap-1 rounded-full border border-gray-200 bg-white p-2 shadow-sm">
       {tabs.map((item) => {
         const Icon = item.icon
         const active = activeTab === item.key
@@ -23,17 +23,19 @@ const RoomTabs = ({ activeTab, onChange }) => {
           <button
             key={item.key}
             onClick={() => onChange(item.key)}
-            className={`group relative flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold transition-all duration-300 ${active
-                ? "bg-[#990011] text-white shadow-md shadow-red-900/20"
-                : "bg-white text-gray-500 hover:bg-gray-50 hover:text-gray-900"
-              }`}
+            className={`group relative flex items-center gap-2 rounded-full px-5 py-2 text-sm font-semibold transition-all duration-300 ${
+              active
+                ? "bg-[#990011] text-white shadow-sm"
+                : "text-gray-500 hover:bg-gray-100 hover:text-gray-900"
+            }`}
             aria-pressed={active}
           >
             <Icon
-              className={`h-4 w-4 ${active
+              className={`h-4 w-4 ${
+                active
                   ? "text-white"
                   : "text-gray-400 group-hover:text-gray-600"
-                }`}
+              }`}
             />
             {item.label}
           </button>

@@ -10,6 +10,7 @@ import { useVideoCall } from "@/hooks/useVideoCall"
 import toast from "react-hot-toast"
 import { MeetingProvider } from "@videosdk.live/react-sdk"
 import { meetingConfig } from "@/utils/videoSdkConfig"
+import useAuth from "@/hooks/useAuth"
 
 const VideoCallContext = createContext()
 
@@ -192,7 +193,7 @@ const VideoCallContent = ({
   }
 
   // Backend Join Sync
-  const token = localStorage.getItem("token")
+  const { token } = useAuth()
   useEffect(() => {
     if (id && token && hasJoined && session && currentUserId) {
       // Check if already in participants list to prevent double-join or unnecessary API calls

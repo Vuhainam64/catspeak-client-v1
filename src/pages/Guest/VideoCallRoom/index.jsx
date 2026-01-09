@@ -77,7 +77,7 @@ const VideoCallRoomContent = () => {
 
   // Let the API handle 401. If we have no user and not loading, it means we failed to auth.
   if (!isLoadingUser && !user) {
-    return <Navigate to="/login" state={{ from: location }} replace />
+    return <Navigate to="/" state={{ from: location }} replace />
   }
 
   if (!hasJoined) {

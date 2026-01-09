@@ -1,29 +1,39 @@
-import { useEffect } from 'react'
-import { createPortal } from 'react-dom'
-import LoginPopup from './LoginPopup'
-import RegisterPopup from './RegisterPopup'
-import ForgotPasswordPopup from './ForgotPasswordPopup'
+import { useEffect } from "react"
+import { createPortal } from "react-dom"
+import { AnimatePresence } from "framer-motion"
+import LoginPopup from "./LoginPopup"
+import RegisterPopup from "./RegisterPopup"
+import ForgotPasswordPopup from "./ForgotPasswordPopup"
 
-const Auth = ({ isOpen, mode = 'login', onClose, onSwitchMode }) => {
-  useEffect(() => {
-    if (!isOpen) return undefined
-    const previousOverflow = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return () => {
-      document.body.style.overflow = previousOverflow
-    }
-  }, [isOpen])
-
+const Auth = ({ isOpen, mode = "login", onClose, onSwitchMode }) => {
   if (!isOpen) return null
 
   const renderPopup = () => {
     switch (mode) {
-      case 'register':
-        return <RegisterPopup onClose={onClose} onSwitchMode={onSwitchMode} />
-      case 'forgot':
-        return <ForgotPasswordPopup onClose={onClose} onSwitchMode={onSwitchMode} />
+      case "register":
+        return (
+          <RegisterPopup
+            key="register"
+            onClose={onClose}
+            onSwitchMode={onSwitchMode}
+          />
+        )
+      case "forgot":
+        return (
+          <ForgotPasswordPopup
+            key="forgot"
+            onClose={onClose}
+            onSwitchMode={onSwitchMode}
+          />
+        )
       default:
-        return <LoginPopup onClose={onClose} onSwitchMode={onSwitchMode} />
+        return (
+          <LoginPopup
+            key="login"
+            onClose={onClose}
+            onSwitchMode={onSwitchMode}
+          />
+        )
     }
   }
 
@@ -35,11 +45,12 @@ const Auth = ({ isOpen, mode = 'login', onClose, onSwitchMode }) => {
         aria-label="Close authentication modal"
         onClick={onClose}
       />
-      <div className="relative z-10 w-full max-w-xl">{renderPopup()}</div>
+      <div className="relative z-10 w-full max-w-xl">
+        <AnimatePresence mode="wait">{renderPopup()}</AnimatePresence>
+      </div>
     </div>,
     document.body
   )
 }
 
 export default Auth
-

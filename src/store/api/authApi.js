@@ -1,4 +1,5 @@
 import { baseApi } from "./baseApi"
+import { setCredentials, logout } from "../slices/authSlice"
 
 export const authApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
@@ -8,15 +9,14 @@ export const authApi = baseApi.injectEndpoints({
         method: "POST",
         body: credentials,
       }),
-      invalidatesTags: ["Auth"],
-      async onQueryStarted(arg, { queryFulfilled }) {
+
+      async onQueryStarted(arg, { dispatch, queryFulfilled }) {
         try {
           const { data } = await queryFulfilled
-          if (data.token) localStorage.setItem("token", data.token)
-          if (data.refreshToken)
-            localStorage.setItem("refreshToken", data.refreshToken)
-          if (data.user) localStorage.setItem("user", JSON.stringify(data.user))
-        } catch (err) { }
+          dispatch(setCredentials(data))
+        } catch (err) {
+          console.error(err)
+        }
       },
     }),
     register: builder.mutation({
@@ -25,15 +25,14 @@ export const authApi = baseApi.injectEndpoints({
         method: "POST",
         body: userData,
       }),
-      invalidatesTags: ["Auth"],
-      async onQueryStarted(arg, { queryFulfilled }) {
+
+      async onQueryStarted(arg, { dispatch, queryFulfilled }) {
         try {
           const { data } = await queryFulfilled
-          if (data.token) localStorage.setItem("token", data.token)
-          if (data.refreshToken)
-            localStorage.setItem("refreshToken", data.refreshToken)
-          if (data.user) localStorage.setItem("user", JSON.stringify(data.user))
-        } catch (err) { }
+          dispatch(setCredentials(data))
+        } catch (err) {
+          console.error(err)
+        }
       },
     }),
     registerAdmin: builder.mutation({
@@ -50,13 +49,20 @@ export const authApi = baseApi.injectEndpoints({
         method: "POST",
         body: tokenData,
       }),
-      async onQueryStarted(arg, { queryFulfilled }) {
+      async onQueryStarted(arg, { dispatch, queryFulfilled, getState }) {
         try {
           const { data } = await queryFulfilled
-          if (data.token) localStorage.setItem("token", data.token)
-          if (data.refreshToken)
-            localStorage.setItem("refreshToken", data.refreshToken)
-        } catch (err) { }
+          const { user } = getState().auth
+          // Preserve existing user if not returned by refresh
+          dispatch(
+            setCredentials({
+              ...data,
+              user: data.user || user,
+            })
+          )
+        } catch (err) {
+          console.error(err)
+        }
       },
     }),
     revoke: builder.mutation({
@@ -72,14 +78,14 @@ export const authApi = baseApi.injectEndpoints({
         url: "/Auth/logout",
         method: "POST",
       }),
-      invalidatesTags: ["Auth"],
-      async onQueryStarted(arg, { queryFulfilled }) {
+
+      async onQueryStarted(arg, { dispatch, queryFulfilled }) {
         try {
           await queryFulfilled
-          localStorage.removeItem("token")
-          localStorage.removeItem("refreshToken")
-          localStorage.removeItem("user")
-        } catch (err) { }
+          dispatch(logout())
+        } catch (err) {
+          console.error(err)
+        }
       },
     }),
     getProfile: builder.query({

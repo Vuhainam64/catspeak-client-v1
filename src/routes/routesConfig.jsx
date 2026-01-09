@@ -1,20 +1,35 @@
 import { AdminLayout, MainLayout, UserLayout, VideoCallLayout } from "@layouts"
 import { PageNotFound, ForbiddenPage } from "@pages/ErrorPage"
 import {
-  HomePage,
+  LandingPage,
   PolicyPage,
-  RoomsPage,
+  HomePage,
   VideoCallRoom,
   LoginPage,
   RegisterPage,
   RoomDetailPage,
   QueuePage,
   ComingSoonPage,
+  RoomsPage,
+  CatSpeakPage,
 } from "@pages/Guest"
 import { UserDashboard, UserProfile, UserSetting } from "@pages/User"
 import { AdminPage } from "@pages/Admin"
 
+import { Navigate } from "react-router-dom"
+import useAuth from "@hooks/useAuth"
+import AuthGuard from "@components/Guards/AuthGuard"
 import GuestGuard from "@components/Guards/GuestGuard"
+
+const RootRoute = () => {
+  const { isAuthenticated, user } = useAuth()
+
+  if (isAuthenticated && user?.roleName === "Admin") {
+    return <Navigate to="/admin" replace />
+  }
+
+  return <HomePage />
+}
 
 const routesConfig = [
   {
@@ -23,20 +38,18 @@ const routesConfig = [
     children: [
       {
         index: true,
-        element: <HomePage />,
+        element: <RootRoute />,
       },
       {
-        path: "rooms",
+        path: "community",
         element: <RoomsPage />,
       },
-    ],
-  },
-  {
-    path: "/room",
-    element: <MainLayout />,
-    children: [
       {
-        path: ":id",
+        path: "cat-speak",
+        element: <CatSpeakPage />,
+      },
+      {
+        path: "room/:id",
         element: <RoomDetailPage />,
       },
     ],
@@ -47,7 +60,11 @@ const routesConfig = [
     children: [
       {
         path: ":id",
-        element: <VideoCallRoom />,
+        element: (
+          <AuthGuard>
+            <VideoCallRoom />
+          </AuthGuard>
+        ),
       },
     ],
   },
@@ -57,7 +74,11 @@ const routesConfig = [
   },
   {
     path: "/app",
-    element: <UserLayout />,
+    element: (
+      <AuthGuard>
+        <UserLayout />
+      </AuthGuard>
+    ),
     children: [
       {
         index: true,
@@ -75,7 +96,11 @@ const routesConfig = [
   },
   {
     path: "/admin",
-    element: <AdminLayout />,
+    element: (
+      <AuthGuard allowedRoles={["Admin"]}>
+        <AdminLayout />
+      </AuthGuard>
+    ),
     children: [
       {
         index: true,
@@ -85,7 +110,11 @@ const routesConfig = [
   },
   {
     path: "/queue",
-    element: <QueuePage />,
+    element: (
+      <AuthGuard>
+        <QueuePage />
+      </AuthGuard>
+    ),
   },
   {
     path: "/cart",

@@ -1,13 +1,13 @@
-import { StrictMode } from 'react'
-import { createRoot } from 'react-dom/client'
-import { ConfigProvider } from 'antd'
-import '@styles/index.css'
-import 'antd/dist/reset.css'
-import App from './App.jsx'
-import { colors } from '@utils/colors'
-import { LanguageProvider } from './context/LanguageContext.jsx'
+import { StrictMode } from "react"
+import { createRoot } from "react-dom/client"
+import { ConfigProvider } from "antd"
+import "@styles/index.css"
+import "antd/dist/reset.css"
+import App from "./App.jsx"
+import { colors } from "@utils/colors"
+import { LanguageProvider } from "./context/LanguageContext.jsx"
 
-createRoot(document.getElementById('root')).render(
+createRoot(document.getElementById("root")).render(
   <StrictMode>
     <ConfigProvider
       theme={{
@@ -27,8 +27,8 @@ createRoot(document.getElementById('root')).render(
       }}
     >
       <LanguageProvider>
-    <App />
+        <App />
       </LanguageProvider>
     </ConfigProvider>
-  </StrictMode>,
+  </StrictMode>
 )

@@ -1,11 +1,15 @@
 import React from "react"
-import { Navigate, Outlet } from "react-router-dom"
+import { Navigate, Outlet, useLocation } from "react-router-dom"
+import useAuth from "@hooks/useAuth"
 
 const GuestGuard = ({ children }) => {
-  const token = localStorage.getItem("token")
+  const { isAuthenticated } = useAuth()
+  const location = useLocation()
 
-  if (token) {
-    return <Navigate to="/app" replace />
+  if (isAuthenticated) {
+    // Redirect to the page they came from, or default to app dashboard
+    const from = location.state?.from?.pathname || "/app"
+    return <Navigate to={from} replace />
   }
 
   return children || <Outlet />

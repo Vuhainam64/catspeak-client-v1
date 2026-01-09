@@ -1,13 +1,11 @@
-import { FiX } from 'react-icons/fi'
-import { useLanguage } from '@context/LanguageContext.jsx'
-import LiquidGlassButton from '@components/LiquidGlassButton'
+import AuthPopupAnim from "./AuthPopupAnim"
 
 const ForgotPasswordPopup = ({ onClose, onSwitchMode }) => {
   const { t } = useLanguage()
   const authText = t.auth
 
   return (
-    <div className="relative rounded-[32px] bg-white px-8 pb-10 pt-12 text-gray-800 shadow-[0_25px_60px_rgba(0,0,0,0.12)]">
+    <AuthPopupAnim className="relative rounded-[32px] bg-white px-8 pb-10 pt-12 text-gray-800 shadow-[0_25px_60px_rgba(0,0,0,0.12)]">
       <button
         type="button"
         aria-label="Close"
@@ -17,8 +15,12 @@ const ForgotPasswordPopup = ({ onClose, onSwitchMode }) => {
         <FiX />
       </button>
 
-      <h2 className="text-center text-3xl font-black text-[#8f0d15]">{authText.forgotTitle}</h2>
-      <p className="mt-3 text-center text-sm text-gray-600">{authText.forgotDescription}</p>
+      <h2 className="text-center text-3xl font-black text-[#8f0d15]">
+        {authText.forgotTitle}
+      </h2>
+      <p className="mt-3 text-center text-sm text-gray-600">
+        {authText.forgotDescription}
+      </p>
 
       <form className="mt-8 flex flex-col gap-5">
         <label className="text-sm font-semibold text-gray-700">
@@ -40,18 +42,17 @@ const ForgotPasswordPopup = ({ onClose, onSwitchMode }) => {
       </form>
 
       <p className="mt-7 text-center text-sm text-gray-700">
-        {authText.backToLogin}{' '}
+        {authText.backToLogin}{" "}
         <button
           type="button"
           className="font-semibold text-[#6e34c5]"
-          onClick={() => onSwitchMode('login')}
+          onClick={() => onSwitchMode("login")}
         >
           {authText.loginLink}
         </button>
       </p>
-    </div>
+    </AuthPopupAnim>
   )
 }
 
 export default ForgotPasswordPopup
-
