@@ -90,6 +90,8 @@ const RoomDetailPage = () => {
   const displaySession = activeSession || {
     name: room.name,
     roomName: room.name,
+    topic: room.topic,
+    requiredLevel: room.requiredLevel,
     participants: [],
   }
 
@@ -97,6 +99,7 @@ const RoomDetailPage = () => {
     <>
       <WaitingScreen
         session={displaySession}
+        room={room}
         participantCount={currentParticipantCount}
         user={user}
         micOn={micOn}

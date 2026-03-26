@@ -9,6 +9,7 @@ import { getTranslatedRoomName } from "../../utils/roomNameUtils"
 
 const WaitingScreen = ({
   session,
+  room,
   participantCount,
   localStream,
   micOn,
@@ -48,6 +49,30 @@ const WaitingScreen = ({
           {getTranslatedRoomName(session?.roomName, t) ||
             t.rooms.waitingScreen.readyToJoin}
         </h4>
+
+        {/* Level & Topic Tags */}
+        {(room?.requiredLevel || room?.topic) && (
+          <div className="mb-3 flex flex-wrap items-center justify-center gap-2">
+            {room?.requiredLevel && (
+              <span className="rounded-full bg-[#990011] px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-white">
+                {room.requiredLevel}
+              </span>
+            )}
+            {room?.topic &&
+              room.topic.split(",").map((t_topic) => {
+                const trimmed = t_topic.trim()
+                return (
+                  <span
+                    key={trimmed}
+                    className="rounded-full bg-[#990011] px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-white"
+                  >
+                    {t.rooms.createRoom?.topics?.[trimmed.toLowerCase()] ||
+                      trimmed}
+                  </span>
+                )
+              })}
+          </div>
+        )}
 
         <ParticipantsPreview
           participants={participants}

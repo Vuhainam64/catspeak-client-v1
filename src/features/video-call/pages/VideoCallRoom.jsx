@@ -44,6 +44,8 @@ const VideoCallRoomContent = () => {
     isLocalScreenShare,
     presenterDisplayName,
     handleToggleScreenShare,
+    // Room data
+    room,
   } = useVideoCallContext()
 
   const { formattedElapsed, formattedMax } = useSessionTimer(session)
@@ -91,8 +93,28 @@ const VideoCallRoomContent = () => {
             <HeaderLogo />
           </div>
           <div>
-            <div className="text-sm font-semibold text-gray-900 md:text-base">
-              {translatedName}
+            <div className="flex items-center gap-2 flex-wrap">
+              <div className="text-sm font-semibold text-gray-900 md:text-base">
+                {translatedName}
+              </div>
+              {room?.requiredLevel && (
+                <span className="rounded-full bg-[#990011] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
+                  {room.requiredLevel}
+                </span>
+              )}
+              {room?.topic &&
+                room.topic.split(",").map((t_topic) => {
+                  const trimmed = t_topic.trim()
+                  return (
+                    <span
+                      key={trimmed}
+                      className="rounded-full bg-[#990011] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white"
+                    >
+                      {t.rooms.createRoom?.topics?.[trimmed.toLowerCase()] ||
+                        trimmed}
+                    </span>
+                  )
+                })}
             </div>
             <div className="hidden text-sm text-[#7A7574] md:block">
               {formatDate(new Date())}

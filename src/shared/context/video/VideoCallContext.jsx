@@ -29,6 +29,7 @@ export const VideoCallContent = ({
   session,
   sessionError,
   sdkToken,
+  room,
 }) => {
   const { id, lang } = useParams()
   const navigate = useNavigate()
@@ -198,6 +199,7 @@ export const VideoCallContent = ({
     user,
     currentUserId: user?.accountId,
     session,
+    room,
     sessionError,
     participantIds,
     messages,

@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from "react"
 import { MessageCircle, Monitor, Users, Layers, Filter } from "lucide-react"
-import { useSearchParams, useParams } from "react-router-dom"
+import { useSearchParams, useParams, useNavigate } from "react-router-dom"
 import {
   RoomFilterSidebar,
   ClassSidebar,
@@ -18,7 +18,7 @@ import {
   AllowConnectSwitch,
 } from "@/features/rooms"
 import { WorkshopCarousel } from "@/features/workshops"
-import { QueueModal } from "@/features/queue"
+
 
 import { useLanguage } from "@/shared/context/LanguageContext"
 import { PageNotFound } from "@/shared/pages"
@@ -36,14 +36,30 @@ const RoomsPage = () => {
   const [page, setPage] = useState(1)
   const [tab, setTab] = useState("communicate")
   const [isCreateRoomModalOpen, setCreateRoomModalOpen] = useState(false)
-  const [isQueueModalOpen, setQueueModalOpen] = useState(false)
+  const navigate = useNavigate()
 
   const { state, actions } = useRoomsPageLogic()
+
+  // Map language code to language name for queue preferences
+  const getLanguageName = (langCode) => {
+    switch (langCode) {
+      case "zh": return "Chinese"
+      case "vi": return "Vietnamese"
+      case "en": return "English"
+      default: return "English"
+    }
+  }
 
   // Actions Wrappers
   const handleCreateOneOnOne = () => {
     actions.handleCreateOneOnOneSession(() => {
-      setQueueModalOpen(true)
+      const supportedLangCode = ["zh", "vi", "en"].includes(lang) ? lang : "en"
+      const preferences = {
+        roomType: "OneToOne",
+        topics: [],
+        languageType: getLanguageName(supportedLangCode),
+      }
+      navigate("/queue", { state: preferences })
     })
   }
 
@@ -209,11 +225,7 @@ const RoomsPage = () => {
           open={isCreateRoomModalOpen}
           onCancel={() => setCreateRoomModalOpen(false)}
         />
-        <QueueModal
-          open={isQueueModalOpen}
-          onCancel={() => setQueueModalOpen(false)}
-          roomType="OneToOne"
-        />
+
       </FluentAnimation>
     </AnimatePresence>
   )

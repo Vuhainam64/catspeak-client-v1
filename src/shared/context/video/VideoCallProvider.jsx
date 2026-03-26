@@ -211,6 +211,7 @@ export const VideoCallProvider = ({ children }) => {
         session={session}
         sessionError={sessionError}
         sdkToken={sdkToken}
+        room={room}
       >
         {children}
       </VideoCallContent>
